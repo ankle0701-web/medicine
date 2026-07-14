@@ -149,6 +149,10 @@
   .med-group .hosp{font-size:11.5px; font-weight:700; color:var(--slate); margin-bottom:4px;}
   .med-group ul{margin:0; padding-left:16px;}
   .med-group li{font-size:12.5px; color:var(--text); line-height:1.65;}
+  .temp-med-badge{
+    display:inline-block; margin-top:4px; margin-right:4px; padding:3px 7px; border-radius:7px;
+    background:var(--amber-soft); color:#96701F; font-size:10.5px; font-weight:800;
+  }
 
   .away-note{
     margin-top:14px; font-size:12px; color:var(--slate); background:var(--slate-soft);
@@ -163,17 +167,20 @@
     display:flex; flex-direction:column; align-items:center; gap:2px;
   }
   .slot-btn .label{font-size:12px; font-weight:700; color:var(--muted);}
+  .slot-btn .med-label{font-size:10px; font-weight:800; color:var(--slate-dark); line-height:1.25;}
   .slot-btn .line{font-size:10.5px; font-weight:700; color:var(--slate-dark); display:none; line-height:1.5;}
   .slot-btn .line.confirm{color:var(--coral-deep);}
   .slot-btn .tag{font-size:9px; color:var(--muted); display:none; font-weight:700;}
 
   .slot-btn.pending{background:var(--amber-soft); border-color:var(--amber);}
   .slot-btn.pending .label{display:none;}
+  .slot-btn.pending .med-label{display:none;}
   .slot-btn.pending .line.admin{display:block;}
   .slot-btn.pending .tag{display:block; color:var(--amber);}
 
   .slot-btn.signed{background:var(--coral-soft); border-color:var(--coral);}
   .slot-btn.signed .label{display:none;}
+  .slot-btn.signed .med-label{display:none;}
   .slot-btn.signed .line{display:block;}
 
   .slot-btn:active{transform:scale(.97);}
@@ -203,6 +210,53 @@
   .config-warning{
     margin:0 0 16px; padding:14px; background:var(--coral-soft); border:1px solid var(--coral);
     border-radius:12px; font-size:12.5px; color:var(--coral-deep); line-height:1.6;
+  }
+
+  /* ---------- 입소자 관리 ---------- */
+  .admin-panel{display:flex; flex-direction:column; gap:14px;}
+  .admin-section{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:14px;
+  }
+  .admin-section h2{font-size:14px; margin:0 0 10px; color:var(--slate-dark);}
+  .admin-form{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .admin-form label{display:flex; flex-direction:column; gap:4px; font-size:11px; font-weight:700; color:var(--muted);}
+  .admin-form input,.admin-form select,.admin-form textarea{
+    border:1px solid var(--border); border-radius:10px; background:var(--bg); color:var(--text);
+    padding:9px 10px; font-family:inherit; font-size:13px; width:100%;
+  }
+  .admin-form textarea{min-height:78px; resize:vertical;}
+  .admin-form .wide{grid-column:1/-1;}
+  .time-checks{display:grid; grid-template-columns:repeat(4,1fr); gap:6px;}
+  .time-check{display:flex !important; flex-direction:row !important; align-items:center; gap:6px !important;}
+  .time-check input{width:auto;}
+  .admin-list{display:flex; flex-direction:column; gap:10px;}
+  .admin-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:12px; display:flex; flex-direction:column; gap:10px;
+  }
+  .admin-card-head{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .admin-title{font-size:14px; font-weight:800;}
+  .admin-meta{font-size:11px; color:var(--muted); margin-top:2px;}
+  .admin-actions{display:flex; gap:6px; flex-wrap:wrap;}
+  .small-btn{
+    border:1px solid var(--border); background:var(--bg); color:var(--slate);
+    border-radius:9px; padding:7px 9px; font-size:11px; font-weight:700;
+  }
+  .small-btn.danger{color:var(--coral-deep); background:var(--coral-soft); border-color:var(--coral-soft);}
+  .med-edit{display:grid; grid-template-columns:1fr auto; gap:6px; align-items:center;}
+  .med-edit span{font-size:12px; line-height:1.5;}
+  .routine-med-form{display:grid; grid-template-columns:1fr 1.4fr auto auto; gap:6px; align-items:center;}
+  .routine-med-form input{
+    border:1px solid var(--border); border-radius:9px; background:var(--bg); color:var(--text);
+    padding:8px 9px; font-family:inherit; font-size:12px; width:100%;
+  }
+  .temp-med-edit{border-top:1px dashed var(--border); padding-top:8px; margin-top:8px;}
+  .admin-empty{font-size:13px; color:var(--muted); text-align:center; padding:20px;}
+  @media (max-width:560px){
+    .admin-form{grid-template-columns:1fr;}
+    .admin-form .wide{grid-column:auto;}
+    .routine-med-form{grid-template-columns:1fr;}
   }
 
   /* ---------- 전체현황(월간) ---------- */
@@ -237,6 +291,11 @@
   table.month-table td.away{background:var(--slate-soft); color:var(--slate); font-weight:800;}
   table.month-table td.today-col{outline:2px solid #B9C6DC; outline-offset:-2px;}
   table.month-table .nm{display:block;}
+  .print-med-list{
+    display:none; font-size:10.5px; line-height:1.45; color:#222; border:1px solid #999;
+    padding:7px 9px; margin:8px 0 10px;
+  }
+  .print-med-list b{display:block; margin-bottom:3px;}
 
   .print-approval{display:none;}
   .legend-note{font-size:10.5px; color:#333; margin-top:6px;}
@@ -280,6 +339,7 @@
     .print-header{
       display:block; margin-bottom:14px; border:1px solid #333; padding:10px 14px;
     }
+    .print-med-list{display:block !important;}
     .print-header h1{font-size:18px; margin:0 0 4px;}
     .print-header .meta{font-size:12px; color:#333; display:flex; justify-content:space-between;}
     .print-sign{display:flex; gap:0; margin-top:8px; border-top:1px solid #333; padding-top:6px;}
@@ -296,7 +356,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, query, where, onSnapshot,
-  doc, setDoc, deleteDoc, serverTimestamp
+  doc, setDoc, deleteDoc, getDocs, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ============================================================
@@ -324,21 +384,31 @@ try{
 /* ============================================================
    2) 담당자 코드 (스마트폰 뒷자리 4자리 → 이름)
    ============================================================ */
-const STAFF = {
+const DEFAULT_STAFF = {
   "9350": { name: "관리자", role: "admin" },
   "7828": { name: "황정임", role: "staff" },
   "6159": { name: "천명순", role: "staff" },
   "7188": { name: "백승진", role: "staff" },
   "1345": { name: "박기택", role: "staff" },
   "6522": { name: "허수영", role: "staff" },
-  "3580": { name: "김명수", role: "staff" }
+  "3580": { name: "김명수", role: "staff" },
+  "4761": { name: "정두리", role: "staff" },
+  "1804": { name: "권미선", role: "staff" },
+  "8955": { name: "이종숙", role: "staff" },
+  "5614": { name: "김순이", role: "staff" },
+  "1869": { name: "임미경", role: "staff" },
+  "6466": { name: "이윤경", role: "staff" },
+  "8701": { name: "정경숙", role: "staff" },
+  "3110": { name: "변은주", role: "staff" }
 };
+const DEFAULT_RESIDENTS_VERSION = "2026-07-14-mulbongseon";
+const DEFAULT_STAFF_VERSION = "2026-07-14-staff-admin";
 
 /* ============================================================
    3) 입소자 · 투약 정보 (2026년 7월 투약일지 기준)
       단위: 기린초1 / 기린초2
    ============================================================ */
-const RESIDENTS = [
+const DEFAULT_RESIDENTS = [
   // ---------- 기린초1 ----------
   { id:"gr_bjs", unit:"기린초1", name:"박종성", dx:"행동조절 · 뇌전증 · 변비",
     times:["아침","점심","저녁"],
@@ -435,10 +505,89 @@ const RESIDENTS = [
     meds:[
       { hosp:"윤현상신경과 · 뇌전증", list:["카마제핀정 2-0-2","할로페리돌 1-0-1"]}
     ]}
+  ,
+
+  // ---------- 물봉선 ----------
+  { id:"mbs_yyj", unit:"물봉선", name:"유연진", dx:"행동조절 · 변비 · 갑상선기능저하",
+    times:["아침","점심","저녁"],
+    meds:[
+      { hosp:"제천병원 · 행동조절", list:["쿠에타핀정200mg 0-1T","클로르프로마진정 50mg 0.5T-1T","클로나제팜정 0.5mg 1T-2T","탄산리튬정 300mg 1T-1T","프로막 200mg 1T-1T","리스펜 0.5mg 1-0"]},
+      { hosp:"명지병원 · 행동조절", list:["리스펜 1mg 0-1","쿠에타핀정100mg 1T-1T"]},
+      { hosp:"제천서울병원 · 갑상선기능저하/변비", list:["씬지로이드 0.1mg 1T","모비졸로정 1-0-0","마그밀정 1-1-1","람노스캡슐 1-1-1","실콘정 1-1-1","포리부틴서방정 1-0-1","폴락스산 1-0-1"]}
+    ]},
+  { id:"mbs_lej", unit:"물봉선", name:"이은주", dx:"행동조절 · 변비",
+    times:["아침","점심","저녁"],
+    meds:[
+      { hosp:"제천병원 · 행동조절", list:["아리피졸2mg 2-2","쿠에타핀25mg 1-1","폭세틴캡슐 0-1","큐로켈정50mg 0-1","트라조돈 0-2","라모스탈정 1-0"]},
+      { hosp:"제천서울병원 · 변비", list:["모비졸로1mg 1-0-0","마그밀정 1-1-1","웰콘정 1-1-1","듀락칸이지시럽 1-0-1","메디락에스 1-1-1","가스모텍 1-0-0"]}
+    ]},
+  { id:"mbs_cjm", unit:"물봉선", name:"채지민", dx:"행동조절 · 변비약",
+    times:["아침","저녁"],
+    meds:[
+      { hosp:"제천병원 · 행동조절", list:["벤즈트로핀 2mg 1T-0","쿠에타핀 12.5mg 1-0","로라반 1mg 0-1T","클로나제팜 0-1T","리스펜 2mg 0-1","데파코트 500mg 0-1T"]},
+      { hosp:"제천서울병원 · 변비약", list:["에소졸정20mg 1-0","모사큐서방정 1-0","마그밀정 2-2","웰콘정 1-1"]}
+    ]},
+  { id:"mbs_nss", unit:"물봉선", name:"노수소", dx:"폐동맥 고혈압 · 복부팽만",
+    times:["아침","저녁"],
+    meds:[
+      { hosp:"천안단국대병원 · 폐동맥 고혈압", list:["옵서미트 10mg 1정(아침)"]},
+      { hosp:"제천서울병원 · 복부팽만", list:["모비졸로정 1mg 1-0-0","가나칸정50mg 1-1-1","모티리톤정 1-1-1","듀파락이지 1-0-1"]}
+    ]},
+  { id:"mbs_jeh", unit:"물봉선", name:"정은희", dx:"변비 · 복부팽만 · 고지혈증",
+    times:["아침","점심","저녁"],
+    meds:[
+      { hosp:"제천서울병원 · 변비/복부팽만", list:["마그밀 1-1-1","가나칸정50mg 1-1-1","헤파자임정 1-1-1","모티리톤정 1-1-1"]},
+      { hosp:"박가정의학과 · 고지혈증", list:["토바스틴 1"]}
+    ]},
+  { id:"mbs_jmh", unit:"물봉선", name:"장미화", dx:"행동조절 · 갑상선기능저하",
+    times:["아침","저녁"],
+    meds:[
+      { hosp:"인신경과 · 행동조절", list:["큐로켈 50mg 1T","스리라반 1mg 1C","로라반 1mg 1T (석)"]},
+      { hosp:"제천서울병원 · 갑상선기능저하", list:["씬지로이드 0.05 1-0"]}
+    ]},
+  { id:"mbs_lhj", unit:"물봉선", name:"이혜정", dx:"변비 · 복부팽만",
+    times:["아침","점심","저녁"],
+    meds:[
+      { hosp:"제천서울병원 · 변비/복부팽만", list:["모비졸로 1mg 1-0-0","마그밀정 2-0-2","웰콘정 2-2-2","듀락칸이지시럽 1-0-1"]}
+    ]},
+  { id:"mbs_sew", unit:"물봉선", name:"서은원", dx:"행동조절 · 변비 · 갑상선저하증 · 고지혈증",
+    times:["식전","아침","점심","저녁"],
+    meds:[
+      { hosp:"제천병원 · 행동조절", list:["로라반정 1mg 0-0-1","리스펜정 1mg 0-0-1"]},
+      { hosp:"제천서울병원 · 변비/갑상선저하증/고지혈증", list:["모비졸로2mg 1-0-0","모사큐서방정15mg 1-0-0","마그밀 2-2-2","에소시드정20mg 1-0-0","웰콘정 2-2-2","듀파락이지시럽 2-2-2","메디락 1-1-1","아기오과립 0-0-2","로레스토정 1-0-0(식전)","씬지로이드0.025 1-0-0"]}
+    ]},
+  { id:"mbs_kjm", unit:"물봉선", name:"김진미", dx:"파킨슨질환 · 부정맥 · 변비",
+    times:["아침","점심","저녁"],
+    meds:[
+      { hosp:"명지병원 · 파킨슨질환/부정맥/변비", list:["라시도캡슐 1-0-1","쿠에타핀25mg 0-0-1","마그밀 1-1-1","퍼킨정 1.5-1.5-1.5","실콘정 1-1-1","리보트릴 1-0-1","모티리톤 1-1-1"]}
+    ]},
+  { id:"mbs_jeg", unit:"물봉선", name:"전은경", dx:"고지혈증 · 하지정맥류",
+    times:["아침","저녁"],
+    meds:[
+      { hosp:"박가정의학과 · 고지혈증", list:["토바스틴정 1(아침)"]},
+      { hosp:"제천서울병원 · 하지정맥류", list:["엔테론 1-1"]}
+    ]},
+  { id:"mbs_yny", unit:"물봉선", name:"윤나영", dx:"행동조절 · 고지혈증",
+    times:["아침","저녁"],
+    meds:[
+      { hosp:"제천병원 · 행동조절", list:["쿠에타핀 50mg 1-1","데파코트 250mg 1-0","데파코트 500mg 0-1"]},
+      { hosp:"박가정의학과 · 고지혈증", list:["토바스틴 1"]}
+    ]},
+  { id:"mbs_cyn", unit:"물봉선", name:"최유나", dx:"행동조절",
+    times:["저녁"],
+    meds:[
+      { hosp:"괴산성모병원 · 행동조절", list:["리스펜정 1mg 1","푸록틴캅셀 10mg 1","리스펜정 0.5mg 1"]}
+    ]},
+  { id:"mbs_yyj2", unit:"물봉선", name:"양유진", dx:"행동조절 · 뇌전증",
+    times:["아침","저녁"],
+    meds:[
+      { hosp:"인신경과 · 행동조절", list:["리스페달2mg 1-1","인데놀10mg 1-1","벤즈트로핀 1/2-1/2"]},
+      { hosp:"원주세브란스기독병원 · 뇌전증", list:["오르필300mg 2-2","오르필150mg 1-1"]}
+    ]}
 ];
 
-const SLOT_ORDER = ["아침","점심","저녁","취침전"];
-const UNITS = ["기린초1","기린초2"];
+const SLOT_ORDER = ["식전","아침","점심","저녁","취침전"];
+const UNITS = ["기린초1","기린초2","물봉선"];
 
 /* ============================================================
    상태
@@ -447,14 +596,20 @@ let state = {
   staffCode: sessionStorage.getItem("medlog_code") || null,
   enteringCode: "",
   loginError: "",
-  activeTab: "기린초1",     // "기린초1" | "기린초2" | "전체현황"
+  activeTab: "기린초1",
   date: todayStr(),
   month: todayStr().slice(0,7),
+  residents: defaultResidents(),
+  residentsLoading: false,
+  staff: {...DEFAULT_STAFF},
+  staffLoading: true,
   logs: {},          // day: { "residentId_time": {administer, confirm} }
   away: {},          // day: { residentId: {name, ts} }
   monthLogs: {},      // month: { "residentId_day_time": {status:'pending'|'confirmed', administer, confirm} }
   monthAway: {},       // month: { "residentId_day": {name} }
   openPanels: {},
+  unsubResidents: null,
+  unsubStaff: null,
   unsubDay: null,
   unsubMonth: null,
   unsubAwayDay: null,
@@ -480,6 +635,331 @@ function showToast(msg){
   showToast._t = setTimeout(()=> toastEl.classList.remove("show"), 2000);
 }
 
+function escapeHtml(value){
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function residentsRef(){ return collection(db, "residents"); }
+function residentRef(id){ return doc(db, "residents", id); }
+function staffRef(){ return collection(db, "staff"); }
+function staffDocRef(code){ return doc(db, "staff", code); }
+function getStaff(code){ return state.staff[code]; }
+function normalizeResident(v, id){
+  return {
+    id,
+    unit: v.unit || UNITS[0],
+    name: v.name || "",
+    dx: v.dx || "",
+    times: Array.isArray(v.times) ? v.times.filter(Boolean) : [],
+    meds: Array.isArray(v.meds) ? v.meds.map(g=>({
+      hosp: g.hosp || "약",
+      list: Array.isArray(g.list) ? g.list.filter(Boolean) : []
+    })) : [],
+    tempMeds: Array.isArray(v.tempMeds) ? v.tempMeds.map(m=>({
+      id: m.id || `temp_${Date.now()}`,
+      name: m.name || "추가약",
+      note: m.note || "",
+      startDate: m.startDate || todayStr(),
+      endDate: m.endDate || m.startDate || todayStr(),
+      times: Array.isArray(m.times) ? m.times.filter(Boolean) : []
+    })) : [],
+    sortOrder: Number.isFinite(v.sortOrder) ? v.sortOrder : 999,
+    hidden: !!v.hidden
+  };
+}
+function defaultResidents(){
+  return DEFAULT_RESIDENTS.map((r, idx) => normalizeResident({...r, sortOrder: idx}, r.id));
+}
+function mergeResidents(remoteResidents){
+  const merged = new Map(defaultResidents().map(r => [r.id, r]));
+  remoteResidents.forEach(r => {
+    if(r.hidden) merged.delete(r.id);
+    else merged.set(r.id, r);
+  });
+  return Array.from(merged.values()).sort((a,b)=>
+    (UNITS.indexOf(a.unit) - UNITS.indexOf(b.unit)) ||
+    (a.sortOrder - b.sortOrder) ||
+    a.name.localeCompare(b.name, "ko")
+  );
+}
+function getResidents(unit){
+  return state.residents.filter(r => !unit || r.unit === unit);
+}
+function findResident(id){
+  return state.residents.find(r => r.id === id);
+}
+function dateInRange(dateStr, startDate, endDate){
+  return dateStr >= startDate && dateStr <= endDate;
+}
+function tempMedsForDate(resident, dateStr){
+  return (resident.tempMeds || []).filter(m => dateInRange(dateStr, m.startDate, m.endDate));
+}
+function tempMedsForMonth(resident, monthStr){
+  const [y,m] = monthStr.split("-").map(Number);
+  const end = `${monthStr}-${String(new Date(y, m, 0).getDate()).padStart(2,"0")}`;
+  const start = `${monthStr}-01`;
+  return (resident.tempMeds || []).filter(m => m.startDate <= end && m.endDate >= start);
+}
+function tempSlotKey(tempMed, time){
+  return `추가약:${tempMed.id}:${time}`;
+}
+function tempSlotTitle(tempMed, time){
+  return `${tempMed.name} · ${time}`;
+}
+function logKeyFor(residentId, time){
+  return `${residentId}_${time}`;
+}
+function normalizeStaff(v){
+  return { name: v.name || "", role: v.role === "admin" ? "admin" : "staff" };
+}
+async function seedStaffIfNeeded(){
+  if(!firebaseReady) return;
+  const markerRef = doc(db, "system", "staffSeed");
+  const snap = await getDocs(staffRef());
+  const existing = new Set();
+  snap.forEach(d=> existing.add(d.id));
+  await Promise.all(Object.entries(DEFAULT_STAFF)
+    .filter(([code]) => !existing.has(code))
+    .map(([code, staff]) => setDoc(staffDocRef(code), {
+      name: staff.name,
+      role: staff.role,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }, { merge:true }))
+  );
+  await setDoc(markerRef, { version: DEFAULT_STAFF_VERSION, completedAt: serverTimestamp() }, { merge:true });
+}
+function subscribeStaff(){
+  if(state.unsubStaff){ state.unsubStaff(); state.unsubStaff = null; }
+  if(!firebaseReady){
+    state.staff = {...DEFAULT_STAFF};
+    state.staffLoading = false;
+    return;
+  }
+  state.staffLoading = true;
+  state.unsubStaff = onSnapshot(staffRef(), snap=>{
+    const next = {};
+    snap.forEach(d=>{ next[d.id] = normalizeStaff(d.data()); });
+    state.staff = Object.keys(next).length ? next : {...DEFAULT_STAFF};
+    state.staffLoading = false;
+    render();
+  }, err=>{
+    console.error(err);
+    state.staff = {...DEFAULT_STAFF};
+    state.staffLoading = false;
+    showToast("담당자 정보를 불러오지 못했습니다.");
+    render();
+  });
+  seedStaffIfNeeded().catch(err=>{
+    console.error(err);
+    showToast("기본 담당자 이동에 실패했습니다.");
+  });
+}
+async function seedResidentsIfEmpty(){
+  if(!firebaseReady) return;
+  const markerRef = doc(db, "system", "residentsSeed");
+  const snap = await getDocs(residentsRef());
+  const existing = new Set();
+  snap.forEach(d=> existing.add(d.id));
+  await Promise.all(DEFAULT_RESIDENTS.filter(r => !existing.has(r.id)).map((r, idx)=>
+    setDoc(residentRef(r.id), {
+      unit: r.unit,
+      name: r.name,
+      dx: r.dx,
+      times: r.times,
+      meds: r.meds,
+      sortOrder: DEFAULT_RESIDENTS.findIndex(item => item.id === r.id) + idx / 1000,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    })
+  ));
+  await setDoc(markerRef, { version: DEFAULT_RESIDENTS_VERSION, completedAt: serverTimestamp(), source: "DEFAULT_RESIDENTS" }, { merge:true });
+}
+function subscribeResidents(){
+  if(state.unsubResidents){ state.unsubResidents(); state.unsubResidents = null; }
+  if(!firebaseReady){
+    state.residentsLoading = false;
+    state.residents = defaultResidents();
+    return;
+  }
+  state.residentsLoading = true;
+  state.unsubResidents = onSnapshot(residentsRef(), snap=>{
+    const next = [];
+    snap.forEach(d=> next.push(normalizeResident(d.data(), d.id)));
+    state.residents = mergeResidents(next);
+    state.residentsLoading = false;
+    render();
+  }, err=>{
+    console.error(err);
+    state.residentsLoading = false;
+    state.residents = defaultResidents();
+    showToast("입소자 정보를 불러오지 못했습니다. 기본 명단으로 표시합니다.");
+    render();
+  });
+  seedResidentsIfEmpty().catch(err=>{
+    console.error(err);
+    showToast("기본 입소자 이동에 실패했습니다.");
+  });
+}
+function checkedTimes(form){
+  return SLOT_ORDER.filter(t => form.querySelector(`[name="time_${t}"]`)?.checked);
+}
+function medRowsFromText(text){
+  return String(text || "")
+    .split("\n")
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+function medsToText(meds){
+  return (meds || []).flatMap(g => (g.list || []).map(m => `${g.hosp} | ${m}`)).join("\n");
+}
+function textToMeds(text){
+  const groups = [];
+  medRowsFromText(text).forEach(row=>{
+    const [hospRaw, ...medParts] = row.split("|");
+    const hosp = medParts.length ? hospRaw.trim() : "약";
+    const med = (medParts.length ? medParts.join("|") : hospRaw).trim();
+    let group = groups.find(g => g.hosp === hosp);
+    if(!group){ group = { hosp, list: [] }; groups.push(group); }
+    group.list.push(med);
+  });
+  return groups;
+}
+async function saveResidentFromForm(form, existingId=null){
+  if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
+  const name = form.elements.residentName.value.trim();
+  if(!name){ showToast("입소자 이름을 입력해주세요."); return; }
+  const id = existingId || `resident_${Date.now()}`;
+  const current = existingId ? findResident(existingId) : null;
+  const data = {
+    unit: form.elements.unit.value,
+    name,
+    dx: form.elements.dx.value.trim(),
+    times: checkedTimes(form),
+    meds: textToMeds(form.elements.meds.value),
+    tempMeds: current?.tempMeds || [],
+    hidden: false,
+    sortOrder: current?.sortOrder ?? state.residents.length,
+    updatedAt: serverTimestamp()
+  };
+  if(!existingId) data.createdAt = serverTimestamp();
+  await setDoc(residentRef(id), data, { merge:true });
+  showToast(existingId ? "입소자 정보를 수정했습니다." : "입소자를 추가했습니다.");
+}
+async function deleteResident(id){
+  const resident = findResident(id);
+  if(!resident) return;
+  if(!confirm(`${resident.name} 입소자 정보를 삭제할까요?\n기존 투약서명 기록은 삭제하지 않습니다.`)) return;
+  if(DEFAULT_RESIDENTS.some(r => r.id === id)){
+    await setDoc(residentRef(id), { hidden: true, updatedAt: serverTimestamp() }, { merge:true });
+  }else{
+    await deleteDoc(residentRef(id));
+  }
+  showToast(`${resident.name} 입소자 정보를 삭제했습니다.`);
+}
+async function deleteMed(residentId, hosp, med){
+  const resident = findResident(residentId);
+  if(!resident) return;
+  const meds = resident.meds
+    .map(g => ({ hosp:g.hosp, list:g.list.filter(item => !(g.hosp === hosp && item === med)) }))
+    .filter(g => g.list.length);
+  await setDoc(residentRef(residentId), { meds, updatedAt: serverTimestamp() }, { merge:true });
+  showToast("약을 삭제했습니다.");
+}
+function addMedToGroups(meds, hosp, med){
+  const next = (meds || []).map(g => ({ hosp:g.hosp, list:[...(g.list || [])] }));
+  let group = next.find(g => g.hosp === hosp);
+  if(!group){ group = { hosp, list: [] }; next.push(group); }
+  group.list.push(med);
+  return next;
+}
+async function addRoutineMedFromForm(form, residentId){
+  if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
+  const resident = findResident(residentId);
+  if(!resident) return;
+  const hosp = form.elements.routineHosp.value.trim() || "약";
+  const med = form.elements.routineMed.value.trim();
+  if(!med){ showToast("추가할 루틴약 이름을 입력해주세요."); return; }
+  const meds = addMedToGroups(resident.meds, hosp, med);
+  await setDoc(residentRef(residentId), { meds, updatedAt: serverTimestamp() }, { merge:true });
+  form.reset();
+  showToast("루틴약을 추가했습니다.");
+}
+async function updateRoutineMedFromForm(form, residentId){
+  if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
+  const resident = findResident(residentId);
+  if(!resident) return;
+  const oldHosp = form.dataset.oldHosp;
+  const oldMed = form.dataset.oldMed;
+  const hosp = form.elements.routineHosp.value.trim() || "약";
+  const med = form.elements.routineMed.value.trim();
+  if(!med){ showToast("루틴약 이름을 입력해주세요."); return; }
+  const withoutOld = (resident.meds || [])
+    .map(g => ({ hosp:g.hosp, list:(g.list || []).filter(item => !(g.hosp === oldHosp && item === oldMed)) }))
+    .filter(g => g.list.length);
+  const meds = addMedToGroups(withoutOld, hosp, med);
+  await setDoc(residentRef(residentId), { meds, updatedAt: serverTimestamp() }, { merge:true });
+  showToast("루틴약을 변경했습니다.");
+}
+async function saveTempMedFromForm(form, residentId){
+  if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
+  const resident = findResident(residentId);
+  if(!resident) return;
+  const name = form.elements.tempMedName.value.trim();
+  const startDate = form.elements.tempStartDate.value;
+  const endDate = form.elements.tempEndDate.value;
+  const times = checkedTimes(form);
+  if(!name){ showToast("추가약 이름을 입력해주세요."); return; }
+  if(!startDate || !endDate || startDate > endDate){ showToast("추가약 날짜를 확인해주세요."); return; }
+  if(times.length === 0){ showToast("추가약 투약시간을 선택해주세요."); return; }
+  const tempMeds = [
+    ...(resident.tempMeds || []),
+    {
+      id: `temp_${Date.now()}`,
+      name,
+      note: form.elements.tempMedNote.value.trim(),
+      startDate,
+      endDate,
+      times
+    }
+  ];
+  await setDoc(residentRef(residentId), { tempMeds, updatedAt: serverTimestamp() }, { merge:true });
+  form.reset();
+  showToast("추가약을 등록했습니다.");
+}
+async function deleteTempMed(residentId, tempMedId){
+  const resident = findResident(residentId);
+  if(!resident) return;
+  const tempMeds = (resident.tempMeds || []).filter(m => m.id !== tempMedId);
+  await setDoc(residentRef(residentId), { tempMeds, updatedAt: serverTimestamp() }, { merge:true });
+  showToast("추가약을 삭제했습니다.");
+}
+async function saveStaffFromForm(form, existingCode=null){
+  if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
+  const code = (existingCode || form.elements.staffCode.value).trim();
+  const name = form.elements.staffName.value.trim();
+  const role = form.elements.staffRole.value;
+  if(!/^\d{4}$/.test(code)){ showToast("담당자 번호는 숫자 4자리로 입력해주세요."); return; }
+  if(!name){ showToast("담당자 이름을 입력해주세요."); return; }
+  await setDoc(staffDocRef(code), { name, role, updatedAt: serverTimestamp() }, { merge:true });
+  showToast(existingCode ? "담당자 정보를 수정했습니다." : "담당자를 추가했습니다.");
+}
+async function deleteStaff(code){
+  const staff = getStaff(code);
+  if(!staff) return;
+  if(staff.role === "admin"){
+    const adminCount = Object.values(state.staff).filter(v => v.role === "admin").length;
+    if(adminCount <= 1){ showToast("관리자는 최소 1명 필요합니다."); return; }
+  }
+  if(!confirm(`${staff.name} 담당자 번호를 삭제할까요?`)) return;
+  await deleteDoc(staffDocRef(code));
+  showToast(`${staff.name} 담당자를 삭제했습니다.`);
+}
+
 /* ============================================================
    Firestore 구독
    ============================================================ */
@@ -493,7 +973,12 @@ function subscribeDate(dateStr){
     const next = {};
     snap.forEach(d=>{
       const v = d.data();
-      next[`${v.residentId}_${v.time}`] = { administer: v.administer || null, confirm: v.confirm || null };
+      next[logKeyFor(v.residentId, v.time)] = {
+        administer: v.administer || null,
+        confirm: v.confirm || null,
+        medName: v.medName || "",
+        medType: v.medType || "routine"
+      };
     });
     state.logs = next;
     render();
@@ -526,7 +1011,12 @@ function subscribeMonth(monthStr){
     snap.forEach(d=>{
       const v = d.data();
       const day = parseInt(v.date.slice(8,10), 10);
-      next[`${v.residentId}_${day}_${v.time}`] = { administer: v.administer || null, confirm: v.confirm || null };
+      next[`${v.residentId}_${day}_${v.time}`] = {
+        administer: v.administer || null,
+        confirm: v.confirm || null,
+        medName: v.medName || "",
+        medType: v.medType || "routine"
+      };
     });
     state.monthLogs = next;
     render();
@@ -550,25 +1040,29 @@ function subscribeMonth(monthStr){
 /* ============================================================
    서명 / 귀가 토글
    ============================================================ */
-async function handleSlotClick(resident, time){
+async function handleSlotClick(resident, time, medInfo=null){
   if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
+  if(!resident){ showToast("입소자 정보를 찾을 수 없습니다."); return; }
   if(state.away[resident.id]) return;
 
-  const staff = STAFF[state.staffCode];
-  const key = `${resident.id}_${time}`;
+  const staff = getStaff(state.staffCode);
+  const key = logKeyFor(resident.id, time);
   const log = state.logs[key] || {};
   const docId = `${resident.id}_${state.date}_${time}`;
   const ref = doc(db, "medLogs", docId);
+  const medName = medInfo?.name || "루틴약";
+  const medType = medInfo?.type || "routine";
 
   if(!log.administer){
     await setDoc(ref, {
       residentId: resident.id, residentName: resident.name, unit: resident.unit,
-      date: state.date, time,
+      date: state.date, time, medName, medType,
+      tempMedId: medInfo?.tempMedId || null,
       administer: { name: staff.name, code: state.staffCode, ts: nowLabel() },
       confirm: null,
       updatedAt: serverTimestamp()
     });
-    showToast(`${resident.name} · ${time} 투약자 서명 완료 (${staff.name}) — 확인자 서명 대기중`);
+    showToast(`${resident.name} · ${medName} · ${time} 투약자 서명 완료 (${staff.name}) — 확인자 서명 대기중`);
     return;
   }
   if(!log.confirm){
@@ -580,13 +1074,14 @@ async function handleSlotClick(resident, time){
       confirm: { name: staff.name, code: state.staffCode, ts: nowLabel() },
       updatedAt: serverTimestamp()
     }, { merge:true });
-    showToast(`${resident.name} · ${time} 확인자 서명 완료 (${staff.name})`);
+    showToast(`${resident.name} · ${medName} · ${time} 확인자 서명 완료 (${staff.name})`);
     return;
   }
   // 이미 투약자·확인자 모두 서명됨 — 추가 동작 없음 (관리자는 × 로 초기화)
 }
 
 async function unsignSlot(resident, time){
+  if(!resident){ showToast("입소자 정보를 찾을 수 없습니다."); return; }
   const docId = `${resident.id}_${state.date}_${time}`;
   await deleteDoc(doc(db, "medLogs", docId));
   showToast(`${resident.name} · ${time} 서명을 초기화했습니다.`);
@@ -594,7 +1089,8 @@ async function unsignSlot(resident, time){
 
 async function toggleAway(resident){
   if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
-  const staff = STAFF[state.staffCode];
+  if(!resident){ showToast("입소자 정보를 찾을 수 없습니다."); return; }
+  const staff = getStaff(state.staffCode);
   const id = `${resident.id}_${state.date}`;
   const ref = doc(db, "residentStatus", id);
   if(state.away[resident.id]){
@@ -613,7 +1109,7 @@ async function toggleAway(resident){
    렌더링
    ============================================================ */
 function render(){
-  if(!state.staffCode || !STAFF[state.staffCode]){
+  if(!state.staffCode || !getStaff(state.staffCode)){
     renderLogin();
   }else{
     renderApp();
@@ -652,11 +1148,12 @@ function renderLogin(){
       if(state.enteringCode.length < 4) state.enteringCode += k;
     }
     if(state.enteringCode.length === 4){
-      if(STAFF[state.enteringCode]){
+      if(getStaff(state.enteringCode)){
         state.staffCode = state.enteringCode;
         sessionStorage.setItem("medlog_code", state.staffCode);
         state.enteringCode = "";
         state.loginError = "";
+        subscribeResidents();
         subscribeDate(state.date);
       }else{
         state.loginError = "등록되지 않은 번호입니다.";
@@ -668,9 +1165,11 @@ function renderLogin(){
 }
 
 function renderApp(){
-  const staff = STAFF[state.staffCode];
+  const staff = getStaff(state.staffCode);
   const isAdmin = staff.role === "admin";
+  if(state.activeTab === "입소자 관리" && !isAdmin) state.activeTab = UNITS[0];
   const isMonth = state.activeTab === "전체현황";
+  const isAdminPage = state.activeTab === "입소자 관리";
 
   app.innerHTML = `
     <div class="topbar no-print">
@@ -684,7 +1183,7 @@ function renderApp(){
           <button class="icon-btn" id="logoutBtn">로그아웃</button>
         </div>
       </div>
-      ${isMonth ? `
+      ${isAdminPage ? "" : (isMonth ? `
         <div class="date-row">
           <button class="date-nav" id="prevMonth">‹</button>
           <input type="month" id="monthInput" value="${state.month}">
@@ -696,24 +1195,24 @@ function renderApp(){
           <input type="date" id="dateInput" value="${state.date}">
           <button class="date-nav" id="nextDay">›</button>
         </div>
-      `}
+      `)}
       <div class="tabs">
-        <div class="tab ${state.activeTab==='기린초1'?'active':''}" data-tab="기린초1">기린초1</div>
-        <div class="tab ${state.activeTab==='기린초2'?'active':''}" data-tab="기린초2">기린초2</div>
+        ${UNITS.map(unit => `<div class="tab ${state.activeTab===unit?'active':''}" data-tab="${escapeHtml(unit)}">${escapeHtml(unit)}</div>`).join("")}
         <div class="tab ${state.activeTab==='전체현황'?'active':''}" data-tab="전체현황">전체현황</div>
+        ${isAdmin ? `<div class="tab ${state.activeTab==='입소자 관리'?'active':''}" data-tab="입소자 관리">입소자 관리</div>` : ""}
       </div>
     </div>
     <main>
       ${!firebaseReady ? `<div class="config-warning no-print">⚠️ Firebase 설정이 비어 있습니다. 코드 상단의 <b>firebaseConfig</b> 값을 본인의 Firebase 프로젝트 정보로 채워주세요.</div>` : ""}
-      ${isMonth ? printMonthHeaderHtml() : printDayHeaderHtml(state.activeTab)}
+      ${isAdminPage ? "" : (isMonth ? printMonthHeaderHtml() : printDayHeaderHtml(state.activeTab))}
       <div id="viewRoot"></div>
     </main>
   `;
 
   const root = document.getElementById("viewRoot");
-  root.innerHTML = isMonth ? renderMonthHtml() : renderDayHtml(state.activeTab, isAdmin);
+  root.innerHTML = isAdminPage ? renderAdminHtml() : (isMonth ? renderMonthHtml() : renderDayHtml(state.activeTab, isAdmin));
 
-  bindCommonEvents(isAdmin, isMonth);
+  bindCommonEvents(isAdmin, isMonth, isAdminPage);
 }
 
 function printDayHeaderHtml(unit){
@@ -731,16 +1230,23 @@ function printMonthHeaderHtml(){
   return `
     <div class="print-header print-only">
       <h1>투약 서명 전체현황 · ${state.month}</h1>
-      <div class="meta"><span>기린초1 · 기린초2</span><span>출력: ${new Date().toLocaleString("ko-KR")}</span></div>
+      <div class="meta"><span>${UNITS.join(" · ")}</span><span>출력: ${new Date().toLocaleString("ko-KR")}</span></div>
     </div>`;
 }
 
 function renderDayHtml(unit, isAdmin){
-  const list = RESIDENTS.filter(r => r.unit === unit);
+  const list = getResidents(unit);
   let done = 0, total = 0, awayCount = 0;
   list.forEach(r=>{
     if(state.away[r.id]){ awayCount++; return; }
-    r.times.forEach(t=>{ total++; const log = state.logs[`${r.id}_${t}`]; if(log && log.administer && log.confirm) done++; });
+    r.times.forEach(t=>{ total++; const log = state.logs[logKeyFor(r.id, t)]; if(log && log.administer && log.confirm) done++; });
+    tempMedsForDate(r, state.date).forEach(m=>{
+      m.times.forEach(t=>{
+        total++;
+        const log = state.logs[logKeyFor(r.id, tempSlotKey(m, t))];
+        if(log && log.administer && log.confirm) done++;
+      });
+    });
   });
 
   const summary = `
@@ -750,7 +1256,9 @@ function renderDayHtml(unit, isAdmin){
       <div class="summary-chip"><div class="n">${awayCount}</div><div class="l">귀가/외박</div></div>
     </div>`;
 
-  const cards = list.length === 0
+  const cards = state.residentsLoading
+    ? `<div class="empty">입소자 정보를 불러오는 중입니다.</div>`
+    : list.length === 0
     ? `<div class="empty">등록된 입소자가 없습니다.</div>`
     : list.map(r => residentCardHtml(r, isAdmin)).join("");
 
@@ -760,26 +1268,40 @@ function renderDayHtml(unit, isAdmin){
 function residentCardHtml(r, isAdmin){
   const open = !!state.openPanels[r.id];
   const away = state.away[r.id];
+  const activeTempMeds = tempMedsForDate(r, state.date);
   const medGroups = r.meds.map(g => `
     <div class="med-group">
       <div class="hosp">${g.hosp}</div>
       <ul>${g.list.map(m=>`<li>${m}</li>`).join("")}</ul>
+    </div>`).join("") + activeTempMeds.map(m => `
+    <div class="med-group">
+      <div class="hosp">추가약 · ${escapeHtml(m.startDate)} ~ ${escapeHtml(m.endDate)}</div>
+      <ul><li>${escapeHtml(m.name)}${m.note ? ` (${escapeHtml(m.note)})` : ""} · ${m.times.map(escapeHtml).join(", ")}</li></ul>
     </div>`).join("");
 
-  const slots = SLOT_ORDER.filter(t => r.times.includes(t)).map(t=>{
-    const log = state.logs[`${r.id}_${t}`] || {};
+  const slotButtonHtml = (timeKey, timeLabel, medLabel, medInfo=null) => {
+    const log = state.logs[logKeyFor(r.id, timeKey)] || {};
     const hasLog = !!log.administer;
     const confirmed = hasLog && !!log.confirm;
     const cls = confirmed ? "signed" : (hasLog ? "pending" : "");
     return `
-      <button class="slot-btn ${cls} ${hasLog?'has-log':''} ${isAdmin?'admin-mode':''}" data-rid="${r.id}" data-time="${t}">
-        <span class="label">${t}</span>
-        <span class="tag">${t} · 확인 대기</span>
+      <button class="slot-btn ${cls} ${hasLog?'has-log':''} ${isAdmin?'admin-mode':''}" data-rid="${escapeHtml(r.id)}" data-time="${escapeHtml(timeKey)}" data-med-name="${escapeHtml(medInfo?.name || "루틴약")}" data-med-type="${escapeHtml(medInfo?.type || "routine")}" data-temp-med-id="${escapeHtml(medInfo?.tempMedId || "")}">
+        <span class="label">${escapeHtml(timeLabel)}</span>
+        <span class="med-label">${escapeHtml(medLabel)}</span>
+        <span class="tag">${escapeHtml(timeLabel)} · 확인 대기</span>
         <span class="line admin">${hasLog ? `투약 ${log.administer.name} ${log.administer.ts}` : ""}</span>
         <span class="line confirm">${confirmed ? `확인 ${log.confirm.name} ${log.confirm.ts}` : ""}</span>
-        ${hasLog ? `<span class="unsign" data-rid="${r.id}" data-time="${t}">×</span>` : ""}
+        ${hasLog ? `<span class="unsign" data-rid="${escapeHtml(r.id)}" data-time="${escapeHtml(timeKey)}">×</span>` : ""}
       </button>`;
-  }).join("");
+  };
+  const routineSlots = SLOT_ORDER.filter(t => r.times.includes(t)).map(t=>
+    slotButtonHtml(t, t, "루틴약", { name:"루틴약", type:"routine" })
+  ).join("");
+  const tempSlots = activeTempMeds.flatMap(m => m.times.map(t =>
+    slotButtonHtml(tempSlotKey(m, t), t, m.name, { name:m.name, type:"temporary", tempMedId:m.id })
+  )).join("");
+  const slots = routineSlots + tempSlots;
+  const tempBadges = activeTempMeds.map(m => `<span class="temp-med-badge">추가약 ${escapeHtml(m.name)} · ${m.times.map(escapeHtml).join(", ")}</span>`).join("");
 
   return `
     <div class="resident-card ${away?'away':''}">
@@ -787,6 +1309,7 @@ function residentCardHtml(r, isAdmin){
         <div>
           <div class="resident-name">${r.name}${away ? `<span class="away-badge">귀가/외박</span>`:""}</div>
           <div class="resident-dx">${r.dx}</div>
+          ${tempBadges ? `<div>${tempBadges}</div>` : ""}
         </div>
         <div class="head-actions">
           <button class="away-btn no-print ${away?'active':''}" data-away="${r.id}">${away ? "귀가 해제" : "귀가/외박"}</button>
@@ -801,10 +1324,11 @@ function residentCardHtml(r, isAdmin){
   `;
 }
 
-function cellHtml(r, d, t, todayD){
+function cellHtml(r, d, row, todayD){
+  if(row.active && !row.active(d)) return `<td class="${d===todayD ? "today-col" : ""}"></td>`;
   const awayInfo = state.monthAway[`${r.id}_${d}`];
-  const log = state.monthLogs[`${r.id}_${d}_${t}`];
-  let cls = "", content = "", title = `${d}일 ${t}`;
+  const log = state.monthLogs[`${r.id}_${d}_${row.key}`];
+  let cls = "", content = "", title = `${d}일 ${row.label}`;
   if(awayInfo){
     cls = "away"; content = `<span class="nm">귀가</span>`; title += ` · 귀가/외박 (${awayInfo.name})`;
   }else if(log && log.administer && log.confirm){
@@ -823,9 +1347,9 @@ function cellHtml(r, d, t, todayD){
 }
 
 function halfTableHtml(r, days, todayD, label){
-  const rows = r.times.map(t=>{
-    const cells = days.map(d=> cellHtml(r, d, t, todayD)).join("");
-    return `<tr><th>${t}</th>${cells}</tr>`;
+  const rows = monthRows(r).map(row=>{
+    const cells = days.map(d=> cellHtml(r, d, row, todayD)).join("");
+    return `<tr><th>${escapeHtml(row.label)}</th>${cells}</tr>`;
   }).join("");
   return `
     <div class="half-label">${label}</div>
@@ -835,6 +1359,30 @@ function halfTableHtml(r, days, todayD, label){
         <tbody>${rows}</tbody>
       </table>
     </div>`;
+}
+function monthRows(r){
+  const rows = r.times.map(t => ({ key:t, label:t }));
+  tempMedsForMonth(r, state.month).forEach(m=>{
+    m.times.forEach(t=>{
+      rows.push({
+        key: tempSlotKey(m, t),
+        label: `${m.name} ${t}`,
+        active: d => dateInRange(`${state.month}-${String(d).padStart(2,"0")}`, m.startDate, m.endDate)
+      });
+    });
+  });
+  return rows;
+}
+function printMedListHtml(r){
+  const routine = (r.meds || []).flatMap(g => (g.list || []).map(m => `${g.hosp}: ${m}`));
+  const temp = tempMedsForMonth(r, state.month).map(m =>
+    `추가약 ${m.startDate}~${m.endDate} ${m.name} (${m.times.join(", ")})${m.note ? ` - ${m.note}` : ""}`
+  );
+  const items = [
+    ...routine.map(m => `<li>${escapeHtml(m)}</li>`),
+    ...temp.map(m => `<li>${escapeHtml(m)}</li>`)
+  ].join("");
+  return `<div class="print-med-list print-only"><b>복용약</b><ul>${items || "<li>등록된 약 없음</li>"}</ul></div>`;
 }
 
 function renderMonthHtml(){
@@ -846,11 +1394,12 @@ function renderMonthHtml(){
   const secondHalf = allDays.filter(d=> d>15);
 
   return UNITS.map(unit=>{
-    const list = RESIDENTS.filter(r=>r.unit===unit);
+    const list = getResidents(unit);
     const cards = list.map(r=>{
       return `
         <div class="month-card">
           <div class="mc-head"><span class="mc-name">${r.name}</span><span class="mc-dx">${r.dx}</span></div>
+          ${printMedListHtml(r)}
           ${halfTableHtml(r, firstHalf, todayD, `1 ~ 15일`)}
           ${halfTableHtml(r, secondHalf, todayD, `16 ~ ${daysInMonth}일`)}
           <div class="legend-note print-only">※ 붉은색 : 투약자, 검은색 : 확인자</div>
@@ -870,12 +1419,159 @@ function renderMonthHtml(){
   }).join("");
 }
 
-function bindCommonEvents(isAdmin, isMonth){
+function timeChecksHtml(resident=null){
+  const selected = resident?.times || ["아침","점심","저녁"];
+  return SLOT_ORDER.map(t=>`
+    <label class="time-check"><input type="checkbox" name="time_${escapeHtml(t)}" ${selected.includes(t) ? "checked" : ""}> ${escapeHtml(t)}</label>
+  `).join("");
+}
+function residentFormHtml(resident=null){
+  const editing = !!resident;
+  return `
+    <form class="admin-form ${editing ? 'edit-resident-form' : 'add-resident-form'}" ${editing ? `data-rid="${escapeHtml(resident.id)}"` : ""}>
+      <label>이름<input name="residentName" value="${escapeHtml(resident?.name || "")}" required></label>
+      <label>생활실
+        <select name="unit">
+          ${UNITS.map(u=>`<option value="${escapeHtml(u)}" ${resident?.unit===u ? "selected" : ""}>${escapeHtml(u)}</option>`).join("")}
+        </select>
+      </label>
+      <label class="wide">병명<input name="dx" value="${escapeHtml(resident?.dx || "")}" placeholder="예: 행동조절 · 뇌전증"></label>
+      <div class="wide time-checks">
+        ${timeChecksHtml(resident)}
+      </div>
+      <label class="wide">약 목록
+        <textarea name="meds" placeholder="병원명 | 약명&#10;병원명 | 약명">${escapeHtml(medsToText(resident?.meds || []))}</textarea>
+      </label>
+      <button class="icon-btn primary wide" type="submit">${editing ? "수정 저장" : "입소자 추가"}</button>
+    </form>`;
+}
+function tempMedFormHtml(resident){
+  return `
+    <form class="admin-form add-temp-med-form" data-rid="${escapeHtml(resident.id)}">
+      <label>추가약 이름<input name="tempMedName" placeholder="예: 감기약 3일분" required></label>
+      <label>메모<input name="tempMedNote" placeholder="예: 식후 복용"></label>
+      <label>시작일<input type="date" name="tempStartDate" value="${state.date}"></label>
+      <label>종료일<input type="date" name="tempEndDate" value="${state.date}"></label>
+      <div class="wide time-checks">${timeChecksHtml({ times:["아침","점심","저녁"] })}</div>
+      <button class="small-btn wide" type="submit">추가약 등록</button>
+    </form>`;
+}
+function routineMedAddFormHtml(resident){
+  return `
+    <form class="routine-med-form add-routine-med-form" data-rid="${escapeHtml(resident.id)}">
+      <input name="routineHosp" placeholder="병원/분류">
+      <input name="routineMed" placeholder="추가할 루틴약">
+      <button class="small-btn" type="submit">루틴약 추가</button>
+      <span></span>
+    </form>`;
+}
+function routineMedRowHtml(residentId, hosp, med){
+  return `
+    <form class="routine-med-form edit-routine-med-form" data-rid="${escapeHtml(residentId)}" data-old-hosp="${escapeHtml(hosp)}" data-old-med="${escapeHtml(med)}">
+      <input name="routineHosp" value="${escapeHtml(hosp)}" aria-label="병원/분류">
+      <input name="routineMed" value="${escapeHtml(med)}" aria-label="루틴약">
+      <button class="small-btn" type="submit">변경 저장</button>
+      <button class="small-btn danger" type="button" data-delete-med="${escapeHtml(residentId)}" data-hosp="${escapeHtml(hosp)}" data-med="${escapeHtml(med)}">약 삭제</button>
+    </form>`;
+}
+function staffFormHtml(code="", staff=null){
+  const editing = !!code;
+  return `
+    <form class="admin-form ${editing ? 'edit-staff-form' : 'add-staff-form'}" ${editing ? `data-code="${escapeHtml(code)}"` : ""}>
+      <label>번호<input name="staffCode" value="${escapeHtml(code)}" ${editing ? "readonly" : ""} maxlength="4" inputmode="numeric" placeholder="4자리"></label>
+      <label>이름<input name="staffName" value="${escapeHtml(staff?.name || "")}" required></label>
+      <label class="wide">권한
+        <select name="staffRole">
+          <option value="staff" ${staff?.role !== "admin" ? "selected" : ""}>일반 담당자</option>
+          <option value="admin" ${staff?.role === "admin" ? "selected" : ""}>관리자</option>
+        </select>
+      </label>
+      <button class="icon-btn primary wide" type="submit">${editing ? "담당자 수정 저장" : "담당자 추가"}</button>
+    </form>`;
+}
+function renderAdminHtml(){
+  if(state.residentsLoading) return `<div class="empty">입소자 정보를 불러오는 중입니다.</div>`;
+  const residents = state.residents;
+  const staffEntries = Object.entries(state.staff).sort(([aCode,a],[bCode,b]) =>
+    (a.role === b.role ? 0 : a.role === "admin" ? -1 : 1) || a.name.localeCompare(b.name, "ko") || aCode.localeCompare(bCode)
+  );
+  const staffHtml = state.staffLoading
+    ? `<div class="admin-empty">담당자 정보를 불러오는 중입니다.</div>`
+    : staffEntries.map(([code, staff]) => `
+      <div class="admin-card">
+        <div class="admin-card-head">
+          <div>
+            <div class="admin-title">${escapeHtml(staff.name)} <span class="admin-meta">${escapeHtml(code)}</span></div>
+            <div class="admin-meta">${staff.role === "admin" ? "관리자" : "일반 담당자"}</div>
+          </div>
+          <div class="admin-actions">
+            <button class="small-btn danger" data-delete-staff="${escapeHtml(code)}">담당자 삭제</button>
+          </div>
+        </div>
+        ${staffFormHtml(code, staff)}
+      </div>
+    `).join("");
+  const listHtml = residents.length ? residents.map(r=>{
+    const meds = (r.meds || []).flatMap(g => (g.list || []).map(m => `
+      ${routineMedRowHtml(r.id, g.hosp, m)}
+    `)).join("");
+    return `
+      <div class="admin-card">
+        <div class="admin-card-head">
+          <div>
+            <div class="admin-title">${escapeHtml(r.name)} <span class="admin-meta">${escapeHtml(r.unit)}</span></div>
+            <div class="admin-meta">${escapeHtml(r.dx || "병명 없음")} · ${r.times.map(escapeHtml).join(", ") || "투약시간 없음"}</div>
+          </div>
+          <div class="admin-actions">
+            <button class="small-btn danger" data-delete-resident="${escapeHtml(r.id)}">입소자 삭제</button>
+          </div>
+        </div>
+        ${residentFormHtml(r)}
+        <div class="temp-med-edit">
+          <div class="admin-meta">루틴약 추가/변경</div>
+          ${routineMedAddFormHtml(r)}
+          ${meds || `<div class="admin-empty">등록된 루틴약이 없습니다.</div>`}
+        </div>
+        <div class="temp-med-edit">
+          <div class="admin-meta">추가약</div>
+          ${tempMedFormHtml(r)}
+          ${(r.tempMeds || []).map(m => `
+            <div class="med-edit">
+              <span>${escapeHtml(m.name)} · ${escapeHtml(m.startDate)}~${escapeHtml(m.endDate)} · ${m.times.map(escapeHtml).join(", ")}${m.note ? ` · ${escapeHtml(m.note)}` : ""}</span>
+              <button class="small-btn danger" data-delete-temp-med="${escapeHtml(r.id)}" data-temp-med-id="${escapeHtml(m.id)}">추가약 삭제</button>
+            </div>
+          `).join("") || `<div class="admin-empty">등록된 추가약이 없습니다.</div>`}
+        </div>
+      </div>`;
+  }).join("") : `<div class="admin-empty">등록된 입소자가 없습니다.</div>`;
+
+  return `
+    <div class="admin-panel">
+      <section class="admin-section">
+        <h2>담당자 추가</h2>
+        ${staffFormHtml()}
+      </section>
+      <section class="admin-section">
+        <h2>담당자 목록</h2>
+        <div class="admin-list">${staffHtml || `<div class="admin-empty">등록된 담당자가 없습니다.</div>`}</div>
+      </section>
+      <section class="admin-section">
+        <h2>입소자 추가</h2>
+        ${residentFormHtml()}
+      </section>
+      <section class="admin-section">
+        <h2>입소자 목록</h2>
+        <div class="admin-list">${listHtml}</div>
+      </section>
+    </div>`;
+}
+
+function bindCommonEvents(isAdmin, isMonth, isAdminPage){
   document.getElementById("logoutBtn").onclick = ()=>{
     sessionStorage.removeItem("medlog_code");
     state.staffCode = null;
-    [state.unsubDay, state.unsubMonth, state.unsubAwayDay, state.unsubAwayMonth].forEach(u=>{ if(u) u(); });
-    state.unsubDay = state.unsubMonth = state.unsubAwayDay = state.unsubAwayMonth = null;
+    [state.unsubDay, state.unsubMonth, state.unsubAwayDay, state.unsubAwayMonth, state.unsubResidents].forEach(u=>{ if(u) u(); });
+    state.unsubDay = state.unsubMonth = state.unsubAwayDay = state.unsubAwayMonth = state.unsubResidents = null;
     render();
   };
   document.getElementById("printBtn").onclick = ()=> window.print();
@@ -883,7 +1579,12 @@ function bindCommonEvents(isAdmin, isMonth){
   document.querySelectorAll(".tab").forEach(t=>{
     t.onclick = ()=>{
       state.activeTab = t.dataset.tab;
-      if(state.activeTab === "전체현황"){
+      if(state.activeTab === "입소자 관리"){
+        if(state.unsubDay){ state.unsubDay(); state.unsubDay=null; }
+        if(state.unsubAwayDay){ state.unsubAwayDay(); state.unsubAwayDay=null; }
+        if(state.unsubMonth){ state.unsubMonth(); state.unsubMonth=null; }
+        if(state.unsubAwayMonth){ state.unsubAwayMonth(); state.unsubAwayMonth=null; }
+      }else if(state.activeTab === "전체현황"){
         if(state.unsubDay){ state.unsubDay(); state.unsubDay=null; }
         if(state.unsubAwayDay){ state.unsubAwayDay(); state.unsubAwayDay=null; }
         subscribeMonth(state.month);
@@ -895,6 +1596,52 @@ function bindCommonEvents(isAdmin, isMonth){
       render();
     };
   });
+
+  if(isAdminPage){
+    document.querySelectorAll(".add-resident-form,.edit-resident-form").forEach(form=>{
+      form.onsubmit = async e=>{
+        e.preventDefault();
+        await saveResidentFromForm(form, form.dataset.rid || null);
+      };
+    });
+    document.querySelectorAll(".add-staff-form,.edit-staff-form").forEach(form=>{
+      form.onsubmit = async e=>{
+        e.preventDefault();
+        await saveStaffFromForm(form, form.dataset.code || null);
+      };
+    });
+    document.querySelectorAll(".add-temp-med-form").forEach(form=>{
+      form.onsubmit = async e=>{
+        e.preventDefault();
+        await saveTempMedFromForm(form, form.dataset.rid);
+      };
+    });
+    document.querySelectorAll(".add-routine-med-form").forEach(form=>{
+      form.onsubmit = async e=>{
+        e.preventDefault();
+        await addRoutineMedFromForm(form, form.dataset.rid);
+      };
+    });
+    document.querySelectorAll(".edit-routine-med-form").forEach(form=>{
+      form.onsubmit = async e=>{
+        e.preventDefault();
+        await updateRoutineMedFromForm(form, form.dataset.rid);
+      };
+    });
+    document.querySelectorAll("[data-delete-resident]").forEach(btn=>{
+      btn.onclick = ()=> deleteResident(btn.dataset.deleteResident);
+    });
+    document.querySelectorAll("[data-delete-staff]").forEach(btn=>{
+      btn.onclick = ()=> deleteStaff(btn.dataset.deleteStaff);
+    });
+    document.querySelectorAll("[data-delete-med]").forEach(btn=>{
+      btn.onclick = ()=> deleteMed(btn.dataset.deleteMed, btn.dataset.hosp, btn.dataset.med);
+    });
+    document.querySelectorAll("[data-delete-temp-med]").forEach(btn=>{
+      btn.onclick = ()=> deleteTempMed(btn.dataset.deleteTempMed, btn.dataset.tempMedId);
+    });
+    return;
+  }
 
   if(isMonth){
     document.getElementById("monthInput").onchange = e=>{
@@ -923,7 +1670,7 @@ function bindCommonEvents(isAdmin, isMonth){
     document.querySelectorAll(".away-btn").forEach(b=>{
       b.onclick = (e)=>{
         e.stopPropagation();
-        const resident = RESIDENTS.find(r=>r.id===b.dataset.away);
+        const resident = findResident(b.dataset.away);
         toggleAway(resident);
       };
     });
@@ -931,9 +1678,13 @@ function bindCommonEvents(isAdmin, isMonth){
       b.onclick = (e)=>{
         if(e.target.classList.contains("unsign")) return;
         const rid = b.dataset.rid, time = b.dataset.time;
-        const resident = RESIDENTS.find(r=>r.id===rid);
+        const resident = findResident(rid);
         b.classList.add("stamping");
-        handleSlotClick(resident, time);
+        handleSlotClick(resident, time, {
+          name: b.dataset.medName || "루틴약",
+          type: b.dataset.medType || "routine",
+          tempMedId: b.dataset.tempMedId || null
+        });
       };
     });
     document.querySelectorAll(".unsign").forEach(u=>{
@@ -941,7 +1692,7 @@ function bindCommonEvents(isAdmin, isMonth){
         e.stopPropagation();
         if(!isAdmin) return;
         const rid = u.dataset.rid, time = u.dataset.time;
-        const resident = RESIDENTS.find(r=>r.id===rid);
+        const resident = findResident(rid);
         unsignSlot(resident, time);
       };
     });
@@ -965,11 +1716,13 @@ function shiftMonth(delta){
   render();
 }
 
-render();
+subscribeStaff();
 if(state.staffCode){
+  subscribeResidents();
   if(state.activeTab === "전체현황"){ subscribeMonth(state.month); }
   else{ subscribeDate(state.date); }
 }
+render();
 </script>
 </body>
 </html>
