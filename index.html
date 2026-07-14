@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -88,7 +88,7 @@
   .icon-btn.primary{background:var(--slate); color:#fff;}
 
   .date-row{display:flex; align-items:center; gap:8px; margin-top:12px;}
-  .date-row input[type=date],.date-row input[type=month]{
+  .date-row input[type=date],.date-row input[type=month],.date-row select{
     flex:1; border:1px solid var(--border); border-radius:10px; padding:9px 10px;
     font-size:14px; font-family:inherit; color:var(--text); background:var(--bg);
   }
@@ -251,7 +251,13 @@
     border:1px solid var(--border); border-radius:9px; background:var(--bg); color:var(--text);
     padding:8px 9px; font-family:inherit; font-size:12px; width:100%;
   }
-  .temp-med-edit{border-top:1px dashed var(--border); padding-top:8px; margin-top:8px;}
+  .temp-med-edit{
+    border:1px dashed var(--border); border-radius:10px; padding:10px; margin-top:10px;
+    background:var(--bg);
+  }
+  .temp-med-edit .admin-meta{
+    font-size:12px; font-weight:800; color:var(--slate-dark); margin:0 0 8px;
+  }
   .admin-empty{font-size:13px; color:var(--muted); text-align:center; padding:20px;}
   @media (max-width:560px){
     .admin-form{grid-template-columns:1fr;}
@@ -277,7 +283,7 @@
     font-size:10.5px; font-weight:700; color:var(--slate); margin:10px 0 4px;
   }
   .half-label:first-of-type{margin-top:0;}
-  table.month-table{border-collapse:collapse; width:100%; min-width:640px;}
+  table.month-table{border-collapse:collapse; width:100%; min-width:420px;}
   table.month-table th, table.month-table td{
     border:1px solid var(--border); text-align:center; font-size:8.5px; padding:3px 2px; white-space:normal;
     line-height:1.25; min-width:30px;
@@ -315,13 +321,13 @@
     .slot-btn .unsign{display:none !important;}
     .summary-bar{display:none;}
     @page{ size: landscape; margin: 10mm; }
-    table.month-table{font-size:13px;}
-    table.month-table th, table.month-table td{padding:7px 4px; min-width:46px;}
-    .half-label{font-size:12px;}
-    table.month-table td.pending .tag{font-size:8.5px;}
+    table.month-table{font-size:11px;}
+    table.month-table th, table.month-table td{padding:5px 4px; min-width:48px;}
+    .half-label{font-size:11px; margin:7px 0 3px;}
+    table.month-table td.pending .tag{font-size:7.5px;}
     .unit-block h2{break-after:avoid;}
     .month-card{
-      break-inside:avoid; border:1px solid #999; padding:16px;
+      break-inside:avoid; border:1px solid #999; padding:12px;
       break-after:page; page-break-after:always;
       display:flex; flex-direction:column; min-height:178mm;
     }
@@ -339,7 +345,8 @@
     .print-header{
       display:block; margin-bottom:14px; border:1px solid #333; padding:10px 14px;
     }
-    .print-med-list{display:block !important;}
+    .print-med-list{display:block !important; font-size:9.5px; padding:5px 7px; margin:5px 0 7px;}
+    .print-med-list ul{margin:0; padding-left:16px;}
     .print-header h1{font-size:18px; margin:0 0 4px;}
     .print-header .meta{font-size:12px; color:#333; display:flex; justify-content:space-between;}
     .print-sign{display:flex; gap:0; margin-top:8px; border-top:1px solid #333; padding-top:6px;}
@@ -355,8 +362,11 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
+  getAuth, signInWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
   getFirestore, collection, query, where, onSnapshot,
-  doc, setDoc, deleteDoc, getDocs, serverTimestamp
+  doc, setDoc, deleteDoc, getDoc, getDocs, addDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ============================================================
@@ -372,218 +382,53 @@ const firebaseConfig = {
 };
 
 let db = null;
+let auth = null;
 let firebaseReady = false;
 try{
   if(firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY"){
     const fbApp = initializeApp(firebaseConfig);
     db = getFirestore(fbApp);
+    auth = getAuth(fbApp);
     firebaseReady = true;
   }
 }catch(e){ console.error(e); }
 
 /* ============================================================
-   2) 담당자 코드 (스마트폰 뒷자리 4자리 → 이름)
+   2) ??/?? ??
+      ?? ???? ??? ??? HTML? ???? ????.
+      Firebase Auth + Firestore users/residents ?????? ?????.
    ============================================================ */
-const DEFAULT_STAFF = {
-  "9350": { name: "관리자", role: "admin" },
-  "7828": { name: "황정임", role: "staff" },
-  "6159": { name: "천명순", role: "staff" },
-  "7188": { name: "백승진", role: "staff" },
-  "1345": { name: "박기택", role: "staff" },
-  "6522": { name: "허수영", role: "staff" },
-  "3580": { name: "김명수", role: "staff" },
-  "4761": { name: "정두리", role: "staff" },
-  "1804": { name: "권미선", role: "staff" },
-  "8955": { name: "이종숙", role: "staff" },
-  "5614": { name: "김순이", role: "staff" },
-  "1869": { name: "임미경", role: "staff" },
-  "6466": { name: "이윤경", role: "staff" },
-  "8701": { name: "정경숙", role: "staff" },
-  "3110": { name: "변은주", role: "staff" }
-};
-const DEFAULT_RESIDENTS_VERSION = "2026-07-14-mulbongseon";
-const DEFAULT_STAFF_VERSION = "2026-07-14-staff-admin";
-
-/* ============================================================
-   3) 입소자 · 투약 정보 (2026년 7월 투약일지 기준)
-      단위: 기린초1 / 기린초2
-   ============================================================ */
+const DEFAULT_STAFF = {};
 const DEFAULT_RESIDENTS = [
-  // ---------- 기린초1 ----------
-  { id:"gr_bjs", unit:"기린초1", name:"박종성", dx:"행동조절 · 뇌전증 · 변비",
-    times:["아침","점심","저녁"],
-    meds:[
-      { hosp:"충북대병원 (정신의학과/신경과) · 행동조절, 뇌전증", list:[
-        "데파코트서방정 500mg 0-1T","케프라정 500mg 1T-1T","가나칸정 50mg 1T-1T",
-        "벤즈트로핀 1mg 0-1T","리페리돈 0.5mg 1T-0","쎄로켈 100mg 0-1T",
-        "솔리안정 100mg 1T-1T","리스페달 1mg 0-1T","리단정 300mg 0-1T"]},
-      { hosp:"제천서울병원 (내과) · 변비약", list:[
-        "모비졸로정 1mg 1-0-0","모사큐서방정 15mg 1-0-0","마그밀정 1-1-1",
-        "듀락이지시럽 1-1-1","폴락스산 1-0-1","아기오 0-0-1"]}
-    ]},
-  { id:"gr_bhs", unit:"기린초1", name:"박현수", dx:"행동조절",
-    times:["아침","저녁"],
-    meds:[
-      { hosp:"제천병원 · 행동조절", list:[
-        "자이레핀정 10mg 0-1T","자이레핀정 5mg 1T-0","쿠에타핀 100mg 1T-1T",
-        "바렙톨서방정 300mg 1T-1T","아리피진정 15mg 0-1T","카마제핀씨알정 200mg 0-1T","에프람 20mg 0-1T"]}
-    ]},
-  { id:"gr_lsy", unit:"기린초1", name:"이승열", dx:"행동조절 · 칼슘제/정장제",
-    times:["아침","점심","저녁"],
-    meds:[
-      { hosp:"제천병원 · 행동조절", list:[
-        "벤즈트로핀정 1mg 1T-0-0","폭세틴캡슐 20mg 1T-0-0","페니토인 100mg 1T-1T-1T",
-        "큐로켈 50mg 1T-0-0","바렙톨서방정 1T-1T-1T","쿠에타핀정 200mg 0-0-1T",
-        "디아제팜정 2mg 1T-0-0","디아제팜정 10mg 0-0-1T","설피딘정 200mg 0-0-1T"]},
-      { hosp:"촉탁의 · 칼슘제/정장제", list:["디카멕스플러스 2-0","메디락에스 1-1"]}
-    ]},
-  { id:"gr_jmg", unit:"기린초1", name:"정민규", dx:"수면장애 · 변비약",
-    times:["아침","저녁"],
-    meds:[
-      { hosp:"인신경과 · 수면장애", list:[
-        "스리반정 1mg 0-2T","루나팜정 1mg 0-1T","프로막정 200mg 2T-2T","라조돈 25mg 0T-1T"]},
-      { hosp:"박가정의학과 · 변비약", list:["셀칼콘정 1T-1T"]}
-    ]},
-  { id:"gr_ksh", unit:"기린초1", name:"김시현", dx:"행동조절",
-    times:["아침","취침전"],
-    meds:[
-      { hosp:"한림대학교동탄성심병원 · 행동조절", list:[
-        "아빌리파이정 2mg 1-0","인데놀정 10mg 1-0","리페리돈 1mg 0-1"]}
-    ]},
-  { id:"gr_ljh", unit:"기린초1", name:"이재학", dx:"행동조절",
-    times:["아침","저녁"],
-    meds:[
-      { hosp:"제천병원 · 행동조절", list:[
-        "디아제팜 2mg 1-1","바렙톨 1-0","데파코트 0-1","리스펜정 0-1","마그밀 1-1"]}
-    ]},
-  { id:"gr_kjs", unit:"기린초1", name:"김진수", dx:"뇌전증",
-    times:["아침","저녁","취침전"],
-    meds:[
-      { hosp:"원주기독병원 · 뇌전증", list:[
-        "라믹탈정 100mg 1.5T-1.5T-0","엑세그란정 1.5T-1.5T-0","페노바비탈 30mg 3.5T-3.5T-0",
-        "리보트릴 1.5T-1.5T-0","파이콤파 12mg 0-0-1T","빔스크정 50mg 1-0-1T"]}
-    ]},
-
-  // ---------- 기린초2 ----------
-  { id:"nr_kjr", unit:"기린초2", name:"김정래", dx:"변비 · 고지혈증",
-    times:["아침","점심","저녁"],
-    meds:[
-      { hosp:"박가정의학과 · 변비, 고지혈증", list:[
-        "셀칼콘 1-1-1","메디락에스 1-1-1","마그밀 1-1-1","토바스틴 1-0-0"]}
-    ]},
-  { id:"nr_mgg", unit:"기린초2", name:"민경구", dx:"기분장애",
-    times:["아침","저녁"],
-    meds:[
-      { hosp:"제천병원 · 기분장애", list:["바렙톨 200mg 1T-1T","리스펜 0.5mg 1T-1T"]}
-    ]},
-  { id:"nr_ljh2", unit:"기린초2", name:"이주환", dx:"고지혈증 · 변비 · 자폐성장애",
-    times:["아침","점심","저녁"],
-    meds:[
-      { hosp:"한림대학교병원 (저녁) · 고지혈증", list:[
-        "아티반정 0.5mg 0-0-1T","팍세론틴 25mg 0-0-1T","리페리돈정 2mg 0-0-1T","데파코트정 500mg 0-0-1T"]},
-      { hosp:"박가정의학과 (아침) · 변비", list:["토바스틴 0-0-1"]},
-      { hosp:"제천서울병원 · 자폐성장애", list:[
-        "모비졸로 1mg 1-0-0","마그밀정 2-0-2","웰콘정 2-2-2","듀락칸이지시럽 2-2-2","아기오 0-0-2"]}
-    ]},
-  { id:"nr_lh", unit:"기린초2", name:"이항", dx:"뇌전증 · 수면장애",
-    times:["아침","취침전"],
-    meds:[
-      { hosp:"서울시 어린이병원 · 뇌전증, 수면장애", list:[
-        "라믹탈 150-150mg","리스펜 2-3mg","벤즈트로핀 1-0mg","오르필 시럽 4-5ml"]},
-      { hosp:"박가정의학과 · 유산균", list:["메디락 1-1"]}
-    ]},
-  { id:"nr_cyb", unit:"기린초2", name:"채영복", dx:"행동조절 · 하지정맥류",
-    times:["아침","저녁"],
-    meds:[
-      { hosp:"제천병원 · 행동조절", list:[
-        "클로나제팜 0.5mg 1-1","큐로켈서방정 200mg 0-1","뉴프람정 10mg 0-1",
-        "프로막정 200mg 2-2","리스페달 1mg 0-1"]},
-      { hosp:"제천서울병원 · 하지정맥류", list:["엔테론 150mg 1-1"]}
-    ]},
-  { id:"nr_kdi", unit:"기린초2", name:"김동인", dx:"뇌전증",
-    times:["아침","저녁"],
-    meds:[
-      { hosp:"윤현상신경과 · 뇌전증", list:["카마제핀정 2-0-2","할로페리돌 1-0-1"]}
-    ]}
-  ,
-
-  // ---------- 물봉선 ----------
-  { id:"mbs_yyj", unit:"물봉선", name:"유연진", dx:"행동조절 · 변비 · 갑상선기능저하",
-    times:["아침","점심","저녁"],
-    meds:[
-      { hosp:"제천병원 · 행동조절", list:["쿠에타핀정200mg 0-1T","클로르프로마진정 50mg 0.5T-1T","클로나제팜정 0.5mg 1T-2T","탄산리튬정 300mg 1T-1T","프로막 200mg 1T-1T","리스펜 0.5mg 1-0"]},
-      { hosp:"명지병원 · 행동조절", list:["리스펜 1mg 0-1","쿠에타핀정100mg 1T-1T"]},
-      { hosp:"제천서울병원 · 갑상선기능저하/변비", list:["씬지로이드 0.1mg 1T","모비졸로정 1-0-0","마그밀정 1-1-1","람노스캡슐 1-1-1","실콘정 1-1-1","포리부틴서방정 1-0-1","폴락스산 1-0-1"]}
-    ]},
-  { id:"mbs_lej", unit:"물봉선", name:"이은주", dx:"행동조절 · 변비",
-    times:["아침","점심","저녁"],
-    meds:[
-      { hosp:"제천병원 · 행동조절", list:["아리피졸2mg 2-2","쿠에타핀25mg 1-1","폭세틴캡슐 0-1","큐로켈정50mg 0-1","트라조돈 0-2","라모스탈정 1-0"]},
-      { hosp:"제천서울병원 · 변비", list:["모비졸로1mg 1-0-0","마그밀정 1-1-1","웰콘정 1-1-1","듀락칸이지시럽 1-0-1","메디락에스 1-1-1","가스모텍 1-0-0"]}
-    ]},
-  { id:"mbs_cjm", unit:"물봉선", name:"채지민", dx:"행동조절 · 변비약",
-    times:["아침","저녁"],
-    meds:[
-      { hosp:"제천병원 · 행동조절", list:["벤즈트로핀 2mg 1T-0","쿠에타핀 12.5mg 1-0","로라반 1mg 0-1T","클로나제팜 0-1T","리스펜 2mg 0-1","데파코트 500mg 0-1T"]},
-      { hosp:"제천서울병원 · 변비약", list:["에소졸정20mg 1-0","모사큐서방정 1-0","마그밀정 2-2","웰콘정 1-1"]}
-    ]},
-  { id:"mbs_nss", unit:"물봉선", name:"노수소", dx:"폐동맥 고혈압 · 복부팽만",
-    times:["아침","저녁"],
-    meds:[
-      { hosp:"천안단국대병원 · 폐동맥 고혈압", list:["옵서미트 10mg 1정(아침)"]},
-      { hosp:"제천서울병원 · 복부팽만", list:["모비졸로정 1mg 1-0-0","가나칸정50mg 1-1-1","모티리톤정 1-1-1","듀파락이지 1-0-1"]}
-    ]},
-  { id:"mbs_jeh", unit:"물봉선", name:"정은희", dx:"변비 · 복부팽만 · 고지혈증",
-    times:["아침","점심","저녁"],
-    meds:[
-      { hosp:"제천서울병원 · 변비/복부팽만", list:["마그밀 1-1-1","가나칸정50mg 1-1-1","헤파자임정 1-1-1","모티리톤정 1-1-1"]},
-      { hosp:"박가정의학과 · 고지혈증", list:["토바스틴 1"]}
-    ]},
-  { id:"mbs_jmh", unit:"물봉선", name:"장미화", dx:"행동조절 · 갑상선기능저하",
-    times:["아침","저녁"],
-    meds:[
-      { hosp:"인신경과 · 행동조절", list:["큐로켈 50mg 1T","스리라반 1mg 1C","로라반 1mg 1T (석)"]},
-      { hosp:"제천서울병원 · 갑상선기능저하", list:["씬지로이드 0.05 1-0"]}
-    ]},
-  { id:"mbs_lhj", unit:"물봉선", name:"이혜정", dx:"변비 · 복부팽만",
-    times:["아침","점심","저녁"],
-    meds:[
-      { hosp:"제천서울병원 · 변비/복부팽만", list:["모비졸로 1mg 1-0-0","마그밀정 2-0-2","웰콘정 2-2-2","듀락칸이지시럽 1-0-1"]}
-    ]},
-  { id:"mbs_sew", unit:"물봉선", name:"서은원", dx:"행동조절 · 변비 · 갑상선저하증 · 고지혈증",
-    times:["식전","아침","점심","저녁"],
-    meds:[
-      { hosp:"제천병원 · 행동조절", list:["로라반정 1mg 0-0-1","리스펜정 1mg 0-0-1"]},
-      { hosp:"제천서울병원 · 변비/갑상선저하증/고지혈증", list:["모비졸로2mg 1-0-0","모사큐서방정15mg 1-0-0","마그밀 2-2-2","에소시드정20mg 1-0-0","웰콘정 2-2-2","듀파락이지시럽 2-2-2","메디락 1-1-1","아기오과립 0-0-2","로레스토정 1-0-0(식전)","씬지로이드0.025 1-0-0"]}
-    ]},
-  { id:"mbs_kjm", unit:"물봉선", name:"김진미", dx:"파킨슨질환 · 부정맥 · 변비",
-    times:["아침","점심","저녁"],
-    meds:[
-      { hosp:"명지병원 · 파킨슨질환/부정맥/변비", list:["라시도캡슐 1-0-1","쿠에타핀25mg 0-0-1","마그밀 1-1-1","퍼킨정 1.5-1.5-1.5","실콘정 1-1-1","리보트릴 1-0-1","모티리톤 1-1-1"]}
-    ]},
-  { id:"mbs_jeg", unit:"물봉선", name:"전은경", dx:"고지혈증 · 하지정맥류",
-    times:["아침","저녁"],
-    meds:[
-      { hosp:"박가정의학과 · 고지혈증", list:["토바스틴정 1(아침)"]},
-      { hosp:"제천서울병원 · 하지정맥류", list:["엔테론 1-1"]}
-    ]},
-  { id:"mbs_yny", unit:"물봉선", name:"윤나영", dx:"행동조절 · 고지혈증",
-    times:["아침","저녁"],
-    meds:[
-      { hosp:"제천병원 · 행동조절", list:["쿠에타핀 50mg 1-1","데파코트 250mg 1-0","데파코트 500mg 0-1"]},
-      { hosp:"박가정의학과 · 고지혈증", list:["토바스틴 1"]}
-    ]},
-  { id:"mbs_cyn", unit:"물봉선", name:"최유나", dx:"행동조절",
-    times:["저녁"],
-    meds:[
-      { hosp:"괴산성모병원 · 행동조절", list:["리스펜정 1mg 1","푸록틴캅셀 10mg 1","리스펜정 0.5mg 1"]}
-    ]},
-  { id:"mbs_yyj2", unit:"물봉선", name:"양유진", dx:"행동조절 · 뇌전증",
-    times:["아침","저녁"],
-    meds:[
-      { hosp:"인신경과 · 행동조절", list:["리스페달2mg 1-1","인데놀10mg 1-1","벤즈트로핀 1/2-1/2"]},
-      { hosp:"원주세브란스기독병원 · 뇌전증", list:["오르필300mg 2-2","오르필150mg 1-1"]}
-    ]}
+  { id:"gr_bjs", unit:"기린초1", name:"박종성", dx:"행동조절 · 뇌전증 · 변비", times:["아침","점심","저녁"], meds:[
+    { hosp:"충북대병원 (정신의학과/신경과) · 행동조절, 뇌전증", list:["데파코트서방정 500mg 0-1T","케프라정 500mg 1T-1T","가나칸정 50mg 1T-1T","벤즈트로핀 1mg 0-1T","리페리돈 0.5mg 1T-0","쎄로켈 100mg 0-1T","솔리안정 100mg 1T-1T","리스페달 1mg 0-1T","리단정 300mg 0-1T"]},
+    { hosp:"제천서울병원 (내과) · 변비약", list:["모비졸로정 1mg 1-0-0","모사큐서방정 15mg 1-0-0","마그밀정 1-1-1","듀락이지시럽 1-1-1","폴락스산 1-0-1","아기오 0-0-1"]}
+  ]},
+  { id:"gr_bhs", unit:"기린초1", name:"박현수", dx:"행동조절", times:["아침","저녁"], meds:[{ hosp:"제천병원 · 행동조절", list:["자이레핀정 10mg 0-1T","자이레핀정 5mg 1T-0","쿠에타핀 100mg 1T-1T","바렙톨서방정 300mg 1T-1T","아리피진정 15mg 0-1T","카마제핀씨알정 200mg 0-1T","에프람 20mg 0-1T"]}]},
+  { id:"gr_lsy", unit:"기린초1", name:"이승열", dx:"행동조절 · 칼슘제/정장제", times:["아침","점심","저녁"], meds:[{ hosp:"제천병원 · 행동조절", list:["벤즈트로핀정 1mg 1T-0-0","폭세틴캡슐 20mg 1T-0-0","페니토인 100mg 1T-1T-1T","큐로켈 50mg 1T-0-0","바렙톨서방정 1T-1T-1T","쿠에타핀정 200mg 0-0-1T","디아제팜정 2mg 1T-0-0","디아제팜정 10mg 0-0-1T","설피딘정 200mg 0-0-1T"]},{ hosp:"촉탁의 · 칼슘제/정장제", list:["디카멕스플러스 2-0","메디락에스 1-1"]}]},
+  { id:"gr_jmg", unit:"기린초1", name:"정민규", dx:"수면장애 · 변비약", times:["아침","저녁"], meds:[{ hosp:"인신경과 · 수면장애", list:["스리반정 1mg 0-2T","루나팜정 1mg 0-1T","프로막정 200mg 2T-2T","라조돈 25mg 0T-1T"]},{ hosp:"박가정의학과 · 변비약", list:["셀칼콘정 1T-1T"]}]},
+  { id:"gr_ksh", unit:"기린초1", name:"김시현", dx:"행동조절", times:["아침","취침전"], meds:[{ hosp:"한림대학교동탄성심병원 · 행동조절", list:["아빌리파이정 2mg 1-0","인데놀정 10mg 1-0","리페리돈 1mg 0-1"]}]},
+  { id:"gr_ljh", unit:"기린초1", name:"이재학", dx:"행동조절", times:["아침","저녁"], meds:[{ hosp:"제천병원 · 행동조절", list:["디아제팜 2mg 1-1","바렙톨 1-0","데파코트 0-1","리스펜정 0-1","마그밀 1-1"]}]},
+  { id:"gr_kjs", unit:"기린초1", name:"김진수", dx:"뇌전증", times:["아침","저녁","취침전"], meds:[{ hosp:"원주기독병원 · 뇌전증", list:["라믹탈정 100mg 1.5T-1.5T-0","엑세그란정 1.5T-1.5T-0","페노바비탈 30mg 3.5T-3.5T-0","리보트릴 1.5T-1.5T-0","파이콤파 12mg 0-0-1T","빔스크정 50mg 1-0-1T"]}]},
+  { id:"nr_kjr", unit:"기린초2", name:"김정래", dx:"변비 · 고지혈증", times:["아침","점심","저녁"], meds:[{ hosp:"박가정의학과 · 변비, 고지혈증", list:["셀칼콘 1-1-1","메디락에스 1-1-1","마그밀 1-1-1","토바스틴 1-0-0"]}]},
+  { id:"nr_mgg", unit:"기린초2", name:"민경구", dx:"기분장애", times:["아침","저녁"], meds:[{ hosp:"제천병원 · 기분장애", list:["바렙톨 200mg 1T-1T","리스펜 0.5mg 1T-1T"]}]},
+  { id:"nr_ljh2", unit:"기린초2", name:"이주환", dx:"고지혈증 · 변비 · 자폐성장애", times:["아침","점심","저녁"], meds:[{ hosp:"한림대학교병원 (저녁) · 고지혈증", list:["아티반정 0.5mg 0-0-1T","팍세론틴 25mg 0-0-1T","리페리돈정 2mg 0-0-1T","데파코트정 500mg 0-0-1T"]},{ hosp:"박가정의학과 (아침) · 변비", list:["토바스틴 0-0-1"]},{ hosp:"제천서울병원 · 자폐성장애", list:["모비졸로 1mg 1-0-0","마그밀정 2-0-2","웰콘정 2-2-2","듀락칸이지시럽 2-2-2","아기오 0-0-2"]}]},
+  { id:"nr_lh", unit:"기린초2", name:"이항", dx:"뇌전증 · 수면장애", times:["아침","취침전"], meds:[{ hosp:"서울시 어린이병원 · 뇌전증, 수면장애", list:["라믹탈 150-150mg","리스펜 2-3mg","벤즈트로핀 1-0mg","오르필 시럽 4-5ml"]},{ hosp:"박가정의학과 · 유산균", list:["메디락 1-1"]}]},
+  { id:"nr_cyb", unit:"기린초2", name:"채영복", dx:"행동조절 · 하지정맥류", times:["아침","저녁"], meds:[{ hosp:"제천병원 · 행동조절", list:["클로나제팜 0.5mg 1-1","큐로켈서방정 200mg 0-1","뉴프람정 10mg 0-1","프로막정 200mg 2-2","리스페달 1mg 0-1"]},{ hosp:"제천서울병원 · 하지정맥류", list:["엔테론 150mg 1-1"]}]},
+  { id:"nr_kdi", unit:"기린초2", name:"김동인", dx:"뇌전증", times:["아침","저녁"], meds:[{ hosp:"윤현상신경과 · 뇌전증", list:["카마제핀정 2-0-2","할로페리돌 1-0-1"]}]},
+  { id:"mbs_yyj", unit:"물봉선", name:"유연진", dx:"행동조절 · 변비 · 갑상선기능저하", times:["아침","점심","저녁"], meds:[{ hosp:"제천병원 · 행동조절", list:["쿠에타핀정200mg 0-1T","클로르프로마진정 50mg 0.5T-1T","클로나제팜정 0.5mg 1T-2T","탄산리튬정 300mg 1T-1T","프로막 200mg 1T-1T","리스펜 0.5mg 1-0"]},{ hosp:"명지병원 · 행동조절", list:["리스펜 1mg 0-1","쿠에타핀정100mg 1T-1T"]},{ hosp:"제천서울병원 · 갑상선기능저하/변비", list:["씬지로이드 0.1mg 1T","모비졸로정 1-0-0","마그밀정 1-1-1","람노스캡슐 1-1-1","실콘정 1-1-1","포리부틴서방정 1-0-1","폴락스산 1-0-1"]}]},
+  { id:"mbs_lej", unit:"물봉선", name:"이은주", dx:"행동조절 · 변비", times:["아침","점심","저녁"], meds:[{ hosp:"제천병원 · 행동조절", list:["아리피졸2mg 2-2","쿠에타핀25mg 1-1","폭세틴캡슐 0-1","큐로켈정50mg 0-1","트라조돈 0-2","라모스탈정 1-0"]},{ hosp:"제천서울병원 · 변비", list:["모비졸로1mg 1-0-0","마그밀정 1-1-1","웰콘정 1-1-1","듀락칸이지시럽 1-0-1","메디락에스 1-1-1","가스모텍 1-0-0"]}]},
+  { id:"mbs_cjm", unit:"물봉선", name:"채지민", dx:"행동조절 · 변비약", times:["아침","저녁"], meds:[{ hosp:"제천병원 · 행동조절", list:["벤즈트로핀 2mg 1T-0","쿠에타핀 12.5mg 1-0","로라반 1mg 0-1T","클로나제팜 0-1T","리스펜 2mg 0-1","데파코트 500mg 0-1T"]},{ hosp:"제천서울병원 · 변비약", list:["에소졸정20mg 1-0","모사큐서방정 1-0","마그밀정 2-2","웰콘정 1-1"]}]},
+  { id:"mbs_nss", unit:"물봉선", name:"노수소", dx:"폐동맥 고혈압 · 복부팽만", times:["아침","저녁"], meds:[{ hosp:"천안단국대병원 · 폐동맥 고혈압", list:["옵서미트 10mg 1정(아침)"]},{ hosp:"제천서울병원 · 복부팽만", list:["모비졸로정 1mg 1-0-0","가나칸정50mg 1-1-1","모티리톤정 1-1-1","듀파락이지 1-0-1"]}]},
+  { id:"mbs_jeh", unit:"물봉선", name:"정은희", dx:"변비 · 복부팽만 · 고지혈증", times:["아침","점심","저녁"], meds:[{ hosp:"제천서울병원 · 변비/복부팽만", list:["마그밀 1-1-1","가나칸정50mg 1-1-1","헤파자임정 1-1-1","모티리톤정 1-1-1"]},{ hosp:"박가정의학과 · 고지혈증", list:["토바스틴 1"]}]},
+  { id:"mbs_jmh", unit:"물봉선", name:"장미화", dx:"행동조절 · 갑상선기능저하", times:["아침","저녁"], meds:[{ hosp:"인신경과 · 행동조절", list:["큐로켈 50mg 1T","스리라반 1mg 1C","로라반 1mg 1T (석)"]},{ hosp:"제천서울병원 · 갑상선기능저하", list:["씬지로이드 0.05 1-0"]}]},
+  { id:"mbs_lhj", unit:"물봉선", name:"이혜정", dx:"변비 · 복부팽만", times:["아침","점심","저녁"], meds:[{ hosp:"제천서울병원 · 변비/복부팽만", list:["모비졸로 1mg 1-0-0","마그밀정 2-0-2","웰콘정 2-2-2","듀락칸이지시럽 1-0-1"]}]},
+  { id:"mbs_sew", unit:"물봉선", name:"서은원", dx:"행동조절 · 변비 · 갑상선저하증 · 고지혈증", times:["식전","아침","점심","저녁"], meds:[{ hosp:"제천병원 · 행동조절", list:["로라반정 1mg 0-0-1","리스펜정 1mg 0-0-1"]},{ hosp:"제천서울병원 · 변비/갑상선저하증/고지혈증", list:["모비졸로2mg 1-0-0","모사큐서방정15mg 1-0-0","마그밀 2-2-2","에소시드정20mg 1-0-0","웰콘정 2-2-2","듀파락이지시럽 2-2-2","메디락 1-1-1","아기오과립 0-0-2","로레스토정 1-0-0(식전)","씬지로이드0.025 1-0-0"]}]},
+  { id:"mbs_kjm", unit:"물봉선", name:"김진미", dx:"파킨슨질환 · 부정맥 · 변비", times:["아침","점심","저녁"], meds:[{ hosp:"명지병원 · 파킨슨질환/부정맥/변비", list:["라시도캡슐 1-0-1","쿠에타핀25mg 0-0-1","마그밀 1-1-1","퍼킨정 1.5-1.5-1.5","실콘정 1-1-1","리보트릴 1-0-1","모티리톤 1-1-1"]}]},
+  { id:"mbs_jeg", unit:"물봉선", name:"전은경", dx:"고지혈증 · 하지정맥류", times:["아침","저녁"], meds:[{ hosp:"박가정의학과 · 고지혈증", list:["토바스틴정 1(아침)"]},{ hosp:"제천서울병원 · 하지정맥류", list:["엔테론 1-1"]}]},
+  { id:"mbs_yny", unit:"물봉선", name:"윤나영", dx:"행동조절 · 고지혈증", times:["아침","저녁"], meds:[{ hosp:"제천병원 · 행동조절", list:["쿠에타핀 50mg 1-1","데파코트 250mg 1-0","데파코트 500mg 0-1"]},{ hosp:"박가정의학과 · 고지혈증", list:["토바스틴 1"]}]},
+  { id:"mbs_cyn", unit:"물봉선", name:"최유나", dx:"행동조절", times:["저녁"], meds:[{ hosp:"괴산성모병원 · 행동조절", list:["리스펜정 1mg 1","푸록틴캅셀 10mg 1","리스펜정 0.5mg 1"]}]},
+  { id:"mbs_yyj2", unit:"물봉선", name:"양유진", dx:"행동조절 · 뇌전증", times:["아침","저녁"], meds:[{ hosp:"인신경과 · 행동조절", list:["리스페달2mg 1-1","인데놀10mg 1-1","벤즈트로핀 1/2-1/2"]},{ hosp:"원주세브란스기독병원 · 뇌전증", list:["오르필300mg 2-2","오르필150mg 1-1"]}]}
 ];
 
 const SLOT_ORDER = ["식전","아침","점심","저녁","취침전"];
@@ -593,15 +438,19 @@ const UNITS = ["기린초1","기린초2","물봉선"];
    상태
    ============================================================ */
 let state = {
-  staffCode: sessionStorage.getItem("medlog_code") || null,
+  currentUser: null,
+  userProfile: null,
+  authReady: true,
   enteringCode: "",
+  loginEmail: "",
   loginError: "",
   activeTab: "기린초1",
   date: todayStr(),
   month: todayStr().slice(0,7),
+  monthWeek: "1",
   residents: defaultResidents(),
   residentsLoading: false,
-  staff: {...DEFAULT_STAFF},
+  staff: {},
   staffLoading: true,
   logs: {},          // day: { "residentId_time": {administer, confirm} }
   away: {},          // day: { residentId: {name, ts} }
@@ -645,9 +494,23 @@ function escapeHtml(value){
 }
 function residentsRef(){ return collection(db, "residents"); }
 function residentRef(id){ return doc(db, "residents", id); }
-function staffRef(){ return collection(db, "staff"); }
-function staffDocRef(code){ return doc(db, "staff", code); }
-function getStaff(code){ return state.staff[code]; }
+function staffRef(){ return collection(db, "staffCodes"); }
+function staffDocRef(code){ return doc(db, "staffCodes", code); }
+function userRef(uid){ return doc(db, "users", uid); }
+const ADMIN_EMAILS = ["ankle0701@gmail.com"];
+function isAdminEmail(email){
+  return ADMIN_EMAILS.includes(String(email || "").trim().toLowerCase());
+}
+function isAdmin(){ return state.userProfile?.role === "admin" || isAdminEmail(state.currentUser?.email); }
+function isEmailLogin(){ return !!state.currentUser?.email && !state.currentUser?.isAnonymous; }
+function canOpenAdminMenu(){ return isAdmin() || isEmailLogin(); }
+function actorInfo(){
+  return {
+    uid: state.currentUser?.uid || null,
+    name: state.userProfile?.name || state.currentUser?.email || "unknown",
+    email: state.currentUser?.email || ""
+  };
+}
 function normalizeResident(v, id){
   return {
     id,
@@ -713,30 +576,70 @@ function tempSlotTitle(tempMed, time){
 function logKeyFor(residentId, time){
   return `${residentId}_${time}`;
 }
-function normalizeStaff(v){
-  return { name: v.name || "", role: v.role === "admin" ? "admin" : "staff" };
+function medicationSnapshot(resident, medInfo){
+  const version = resident.medicationVersion || resident.updatedAt?.seconds || "unversioned";
+  if(medInfo?.type === "temporary"){
+    const temp = (resident.tempMeds || []).find(m => m.id === medInfo.tempMedId) || null;
+    return {
+      medicationVersion: version,
+      routineMeds: null,
+      temporaryMed: temp ? cloneData(temp) : { id: medInfo.tempMedId, name: medInfo.name }
+    };
+  }
+  return {
+    medicationVersion: version,
+    routineMeds: cloneData(resident.meds || []),
+    temporaryMed: null
+  };
 }
-async function seedStaffIfNeeded(){
-  if(!firebaseReady) return;
-  const markerRef = doc(db, "system", "staffSeed");
-  const snap = await getDocs(staffRef());
-  const existing = new Set();
-  snap.forEach(d=> existing.add(d.id));
-  await Promise.all(Object.entries(DEFAULT_STAFF)
-    .filter(([code]) => !existing.has(code))
-    .map(([code, staff]) => setDoc(staffDocRef(code), {
-      name: staff.name,
-      role: staff.role,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    }, { merge:true }))
-  );
-  await setDoc(markerRef, { version: DEFAULT_STAFF_VERSION, completedAt: serverTimestamp() }, { merge:true });
+function normalizeStaff(v){
+  return { name: v.name || "", email: v.email || "", role: v.role === "admin" ? "admin" : "staff" };
+}
+function normalizeRole(value){
+  return String(value || "").trim().replace(/^["']|["']$/g, "");
+}
+async function loginWithStaffCode(code){
+  if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
+  if(!/^\d{4}$/.test(code)){
+    state.loginError = "4자리 번호를 입력해주세요.";
+    render();
+    return;
+  }
+  try{
+    const cred = auth.currentUser?.isAnonymous ? { user: auth.currentUser } : await signInAnonymously(auth);
+    const snap = await getDoc(staffDocRef(code));
+    if(!snap.exists()){
+      state.loginError = "등록되지 않은 번호입니다.";
+      state.enteringCode = "";
+      render();
+      return;
+    }
+    const data = snap.data();
+    state.currentUser = cred.user;
+    state.userProfile = {
+      uid: cred.user.uid,
+      name: data.name || "직원",
+      email: "",
+      role: "staff",
+      staffCode: code
+    };
+    sessionStorage.setItem("staff_code_profile", JSON.stringify(state.userProfile));
+    state.enteringCode = "";
+    state.loginError = "";
+    subscribeStaff();
+    subscribeResidents();
+    subscribeDate(state.date);
+    render();
+  }catch(err){
+    console.error(err);
+    state.loginError = "직원 번호 로그인을 할 수 없습니다.";
+    render();
+  }
 }
 function subscribeStaff(){
   if(state.unsubStaff){ state.unsubStaff(); state.unsubStaff = null; }
   if(!firebaseReady){
-    state.staff = {...DEFAULT_STAFF};
+    state.staff = {};
     state.staffLoading = false;
     return;
   }
@@ -744,40 +647,16 @@ function subscribeStaff(){
   state.unsubStaff = onSnapshot(staffRef(), snap=>{
     const next = {};
     snap.forEach(d=>{ next[d.id] = normalizeStaff(d.data()); });
-    state.staff = Object.keys(next).length ? next : {...DEFAULT_STAFF};
+    state.staff = next;
     state.staffLoading = false;
     render();
   }, err=>{
     console.error(err);
-    state.staff = {...DEFAULT_STAFF};
+    state.staff = {};
     state.staffLoading = false;
     showToast("담당자 정보를 불러오지 못했습니다.");
     render();
   });
-  seedStaffIfNeeded().catch(err=>{
-    console.error(err);
-    showToast("기본 담당자 이동에 실패했습니다.");
-  });
-}
-async function seedResidentsIfEmpty(){
-  if(!firebaseReady) return;
-  const markerRef = doc(db, "system", "residentsSeed");
-  const snap = await getDocs(residentsRef());
-  const existing = new Set();
-  snap.forEach(d=> existing.add(d.id));
-  await Promise.all(DEFAULT_RESIDENTS.filter(r => !existing.has(r.id)).map((r, idx)=>
-    setDoc(residentRef(r.id), {
-      unit: r.unit,
-      name: r.name,
-      dx: r.dx,
-      times: r.times,
-      meds: r.meds,
-      sortOrder: DEFAULT_RESIDENTS.findIndex(item => item.id === r.id) + idx / 1000,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    })
-  ));
-  await setDoc(markerRef, { version: DEFAULT_RESIDENTS_VERSION, completedAt: serverTimestamp(), source: "DEFAULT_RESIDENTS" }, { merge:true });
 }
 function subscribeResidents(){
   if(state.unsubResidents){ state.unsubResidents(); state.unsubResidents = null; }
@@ -797,16 +676,55 @@ function subscribeResidents(){
     console.error(err);
     state.residentsLoading = false;
     state.residents = defaultResidents();
-    showToast("입소자 정보를 불러오지 못했습니다. 기본 명단으로 표시합니다.");
+    showToast("입소자 정보를 불러오지 못해 기본 명단으로 표시합니다.");
     render();
-  });
-  seedResidentsIfEmpty().catch(err=>{
-    console.error(err);
-    showToast("기본 입소자 이동에 실패했습니다.");
   });
 }
 function checkedTimes(form){
   return SLOT_ORDER.filter(t => form.querySelector(`[name="time_${t}"]`)?.checked);
+}
+function requireAdmin(){
+  if(!isAdmin()){
+    showToast("관리자 권한이 필요합니다.");
+    return false;
+  }
+  return true;
+}
+function cloneData(value){
+  return JSON.parse(JSON.stringify(value ?? null));
+}
+async function writeAudit(action, targetResident, beforeValue, afterValue, extra={}){
+  if(!firebaseReady || !state.currentUser) return;
+  const actor = actorInfo();
+  await addDoc(collection(db, "auditLogs"), {
+    actorUid: actor.uid,
+    actorName: actor.name,
+    actorEmail: actor.email,
+    action,
+    targetResidentId: targetResident?.id || extra.targetResidentId || null,
+    targetResidentName: targetResident?.name || extra.targetResidentName || null,
+    before: cloneData(beforeValue),
+    after: cloneData(afterValue),
+    reason: extra.reason || null,
+    createdAt: serverTimestamp()
+  });
+}
+async function loadUserProfile(user){
+  if(!firebaseReady || !user) return null;
+  try{
+    const snap = await getDoc(userRef(user.uid));
+    if(!snap.exists()) return { uid:user.uid, email:user.email, name:user.email, role:isAdminEmail(user.email) ? "admin" : "staff" };
+    const data = snap.data();
+    return {
+      uid:user.uid,
+      email:user.email,
+      name:data.name || user.email,
+      role:normalizeRole(data.role) === "admin" || isAdminEmail(user.email) ? "admin" : "staff"
+    };
+  }catch(err){
+    console.error(err);
+    return { uid:user.uid, email:user.email, name:user.email, role:isAdminEmail(user.email) ? "admin" : "staff" };
+  }
 }
 function medRowsFromText(text){
   return String(text || "")
@@ -830,6 +748,7 @@ function textToMeds(text){
   return groups;
 }
 async function saveResidentFromForm(form, existingId=null){
+  if(!requireAdmin()) return;
   if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
   const name = form.elements.residentName.value.trim();
   if(!name){ showToast("입소자 이름을 입력해주세요."); return; }
@@ -848,26 +767,28 @@ async function saveResidentFromForm(form, existingId=null){
   };
   if(!existingId) data.createdAt = serverTimestamp();
   await setDoc(residentRef(id), data, { merge:true });
+  await writeAudit(existingId ? "resident.update" : "resident.create", { id, name }, current, data);
   showToast(existingId ? "입소자 정보를 수정했습니다." : "입소자를 추가했습니다.");
 }
 async function deleteResident(id){
+  if(!requireAdmin()) return;
   const resident = findResident(id);
   if(!resident) return;
   if(!confirm(`${resident.name} 입소자 정보를 삭제할까요?\n기존 투약서명 기록은 삭제하지 않습니다.`)) return;
-  if(DEFAULT_RESIDENTS.some(r => r.id === id)){
-    await setDoc(residentRef(id), { hidden: true, updatedAt: serverTimestamp() }, { merge:true });
-  }else{
-    await deleteDoc(residentRef(id));
-  }
+  await deleteDoc(residentRef(id));
+  await writeAudit("resident.delete", resident, resident, null);
   showToast(`${resident.name} 입소자 정보를 삭제했습니다.`);
 }
 async function deleteMed(residentId, hosp, med){
+  if(!requireAdmin()) return;
   const resident = findResident(residentId);
   if(!resident) return;
+  const before = cloneData(resident.meds);
   const meds = resident.meds
     .map(g => ({ hosp:g.hosp, list:g.list.filter(item => !(g.hosp === hosp && item === med)) }))
     .filter(g => g.list.length);
   await setDoc(residentRef(residentId), { meds, updatedAt: serverTimestamp() }, { merge:true });
+  await writeAudit("routineMed.delete", resident, before, meds);
   showToast("약을 삭제했습니다.");
 }
 function addMedToGroups(meds, hosp, med){
@@ -878,37 +799,45 @@ function addMedToGroups(meds, hosp, med){
   return next;
 }
 async function addRoutineMedFromForm(form, residentId){
+  if(!requireAdmin()) return;
   if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
   const resident = findResident(residentId);
   if(!resident) return;
+  const before = cloneData(resident.meds);
   const hosp = form.elements.routineHosp.value.trim() || "약";
   const med = form.elements.routineMed.value.trim();
-  if(!med){ showToast("추가할 루틴약 이름을 입력해주세요."); return; }
+  if(!med){ showToast("추가할 정규약 이름을 입력해주세요."); return; }
   const meds = addMedToGroups(resident.meds, hosp, med);
   await setDoc(residentRef(residentId), { meds, updatedAt: serverTimestamp() }, { merge:true });
+  await writeAudit("routineMed.create", resident, before, meds);
   form.reset();
-  showToast("루틴약을 추가했습니다.");
+  showToast("정규약을 추가했습니다.");
 }
 async function updateRoutineMedFromForm(form, residentId){
+  if(!requireAdmin()) return;
   if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
   const resident = findResident(residentId);
   if(!resident) return;
+  const before = cloneData(resident.meds);
   const oldHosp = form.dataset.oldHosp;
   const oldMed = form.dataset.oldMed;
   const hosp = form.elements.routineHosp.value.trim() || "약";
   const med = form.elements.routineMed.value.trim();
-  if(!med){ showToast("루틴약 이름을 입력해주세요."); return; }
+  if(!med){ showToast("정규약 이름을 입력해주세요."); return; }
   const withoutOld = (resident.meds || [])
     .map(g => ({ hosp:g.hosp, list:(g.list || []).filter(item => !(g.hosp === oldHosp && item === oldMed)) }))
     .filter(g => g.list.length);
   const meds = addMedToGroups(withoutOld, hosp, med);
   await setDoc(residentRef(residentId), { meds, updatedAt: serverTimestamp() }, { merge:true });
-  showToast("루틴약을 변경했습니다.");
+  await writeAudit("routineMed.update", resident, before, meds);
+  showToast("정규약을 변경했습니다.");
 }
 async function saveTempMedFromForm(form, residentId){
+  if(!requireAdmin()) return;
   if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
   const resident = findResident(residentId);
   if(!resident) return;
+  const before = cloneData(resident.tempMeds || []);
   const name = form.elements.tempMedName.value.trim();
   const startDate = form.elements.tempStartDate.value;
   const endDate = form.elements.tempEndDate.value;
@@ -928,35 +857,39 @@ async function saveTempMedFromForm(form, residentId){
     }
   ];
   await setDoc(residentRef(residentId), { tempMeds, updatedAt: serverTimestamp() }, { merge:true });
+  await writeAudit("temporaryMed.create", resident, before, tempMeds);
   form.reset();
   showToast("추가약을 등록했습니다.");
 }
 async function deleteTempMed(residentId, tempMedId){
+  if(!requireAdmin()) return;
   const resident = findResident(residentId);
   if(!resident) return;
+  const before = cloneData(resident.tempMeds || []);
   const tempMeds = (resident.tempMeds || []).filter(m => m.id !== tempMedId);
   await setDoc(residentRef(residentId), { tempMeds, updatedAt: serverTimestamp() }, { merge:true });
+  await writeAudit("temporaryMed.delete", resident, before, tempMeds);
   showToast("추가약을 삭제했습니다.");
 }
 async function saveStaffFromForm(form, existingCode=null){
+  if(!requireAdmin()) return;
   if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
   const code = (existingCode || form.elements.staffCode.value).trim();
   const name = form.elements.staffName.value.trim();
-  const role = form.elements.staffRole.value;
   if(!/^\d{4}$/.test(code)){ showToast("담당자 번호는 숫자 4자리로 입력해주세요."); return; }
   if(!name){ showToast("담당자 이름을 입력해주세요."); return; }
-  await setDoc(staffDocRef(code), { name, role, updatedAt: serverTimestamp() }, { merge:true });
+  const before = state.staff[code] || null;
+  await setDoc(staffDocRef(code), { name, role:"staff", updatedAt: serverTimestamp() }, { merge:true });
+  await writeAudit(existingCode ? "staffCode.update" : "staffCode.create", null, before, { code, name, role:"staff" }, { targetResidentName:name });
   showToast(existingCode ? "담당자 정보를 수정했습니다." : "담당자를 추가했습니다.");
 }
 async function deleteStaff(code){
-  const staff = getStaff(code);
+  if(!requireAdmin()) return;
+  const staff = state.staff[code];
   if(!staff) return;
-  if(staff.role === "admin"){
-    const adminCount = Object.values(state.staff).filter(v => v.role === "admin").length;
-    if(adminCount <= 1){ showToast("관리자는 최소 1명 필요합니다."); return; }
-  }
   if(!confirm(`${staff.name} 담당자 번호를 삭제할까요?`)) return;
   await deleteDoc(staffDocRef(code));
+  await writeAudit("staffCode.delete", null, staff, null, { targetResidentName:staff.name });
   showToast(`${staff.name} 담당자를 삭제했습니다.`);
 }
 
@@ -1045,20 +978,23 @@ async function handleSlotClick(resident, time, medInfo=null){
   if(!resident){ showToast("입소자 정보를 찾을 수 없습니다."); return; }
   if(state.away[resident.id]) return;
 
-  const staff = getStaff(state.staffCode);
+  const staff = actorInfo();
   const key = logKeyFor(resident.id, time);
   const log = state.logs[key] || {};
   const docId = `${resident.id}_${state.date}_${time}`;
   const ref = doc(db, "medLogs", docId);
-  const medName = medInfo?.name || "루틴약";
+  const medName = medInfo?.name || "정규약";
   const medType = medInfo?.type || "routine";
+  const medSnapshot = medicationSnapshot(resident, medInfo);
 
   if(!log.administer){
     await setDoc(ref, {
       residentId: resident.id, residentName: resident.name, unit: resident.unit,
+      diagnosis: resident.dx || "",
       date: state.date, time, medName, medType,
       tempMedId: medInfo?.tempMedId || null,
-      administer: { name: staff.name, code: state.staffCode, ts: nowLabel() },
+      ...medSnapshot,
+      administer: { name: staff.name, uid: staff.uid, email: staff.email, ts: nowLabel() },
       confirm: null,
       updatedAt: serverTimestamp()
     });
@@ -1066,12 +1002,12 @@ async function handleSlotClick(resident, time, medInfo=null){
     return;
   }
   if(!log.confirm){
-    if(log.administer.code === state.staffCode){
+    if(log.administer.uid === state.currentUser?.uid){
       showToast("투약자와 다른 담당자가 확인해야 합니다.");
       return;
     }
     await setDoc(ref, {
-      confirm: { name: staff.name, code: state.staffCode, ts: nowLabel() },
+      confirm: { name: staff.name, uid: staff.uid, email: staff.email, ts: nowLabel() },
       updatedAt: serverTimestamp()
     }, { merge:true });
     showToast(`${resident.name} · ${medName} · ${time} 확인자 서명 완료 (${staff.name})`);
@@ -1081,26 +1017,33 @@ async function handleSlotClick(resident, time, medInfo=null){
 }
 
 async function unsignSlot(resident, time){
+  if(!requireAdmin()) return;
   if(!resident){ showToast("입소자 정보를 찾을 수 없습니다."); return; }
+  const reason = prompt("투약서명 초기화 사유를 입력해주세요.");
+  if(!reason || !reason.trim()){ showToast("초기화 사유가 필요합니다."); return; }
   const docId = `${resident.id}_${state.date}_${time}`;
+  const before = state.logs[logKeyFor(resident.id, time)] || null;
   await deleteDoc(doc(db, "medLogs", docId));
+  await writeAudit("medLog.unsign", resident, before, null, { reason: reason.trim() });
   showToast(`${resident.name} · ${time} 서명을 초기화했습니다.`);
 }
 
 async function toggleAway(resident){
   if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
   if(!resident){ showToast("입소자 정보를 찾을 수 없습니다."); return; }
-  const staff = getStaff(state.staffCode);
+  const staff = actorInfo();
   const id = `${resident.id}_${state.date}`;
   const ref = doc(db, "residentStatus", id);
   if(state.away[resident.id]){
     await deleteDoc(ref);
+    await writeAudit("residentStatus.clear", resident, state.away[resident.id], { away:false, date:state.date });
     showToast(`${resident.name} 귀가 표시를 해제했습니다.`);
   }else{
     await setDoc(ref, {
       residentId: resident.id, unit: resident.unit, date: state.date,
-      away: true, staffName: staff.name, staffCode: state.staffCode, ts: nowLabel()
+      away: true, staffName: staff.name, staffUid: staff.uid, staffEmail: staff.email, ts: nowLabel()
     });
+    await writeAudit("residentStatus.away", resident, null, { away:true, date:state.date });
     showToast(`${resident.name} 귀가/외박으로 표시했습니다.`);
   }
 }
@@ -1109,7 +1052,9 @@ async function toggleAway(resident){
    렌더링
    ============================================================ */
 function render(){
-  if(!state.staffCode || !getStaff(state.staffCode)){
+  if(!state.authReady){
+    app.innerHTML = `<div class="empty">로그인 상태를 확인하는 중입니다.</div>`;
+  }else if(!state.currentUser || !state.userProfile){
     renderLogin();
   }else{
     renderApp();
@@ -1136,6 +1081,12 @@ function renderLogin(){
         <button data-k="0">0</button>
         <button class="ghost" data-k="back">←</button>
       </div>
+      <form class="admin-form" id="loginForm" style="width:min(360px,100%);">
+        <div class="admin-meta wide">관리자 로그인</div>
+        <label class="wide">이메일<input type="email" name="email" value="${escapeHtml(state.loginEmail)}" required autocomplete="username"></label>
+        <label class="wide">비밀번호<input type="password" name="password" required autocomplete="current-password"></label>
+        <button class="icon-btn primary wide" type="submit">관리자 로그인</button>
+      </form>
     </div>
   `;
   document.getElementById("keypad").addEventListener("click", e=>{
@@ -1144,30 +1095,34 @@ function renderLogin(){
     const k = btn.dataset.k;
     if(k === "clear"){ state.enteringCode = ""; state.loginError=""; }
     else if(k === "back"){ state.enteringCode = state.enteringCode.slice(0,-1); }
-    else{
-      if(state.enteringCode.length < 4) state.enteringCode += k;
-    }
+    else if(state.enteringCode.length < 4){ state.enteringCode += k; }
     if(state.enteringCode.length === 4){
-      if(getStaff(state.enteringCode)){
-        state.staffCode = state.enteringCode;
-        sessionStorage.setItem("medlog_code", state.staffCode);
-        state.enteringCode = "";
-        state.loginError = "";
-        subscribeResidents();
-        subscribeDate(state.date);
-      }else{
-        state.loginError = "등록되지 않은 번호입니다.";
-        setTimeout(()=>{ state.enteringCode=""; render(); }, 500);
-      }
+      loginWithStaffCode(state.enteringCode);
+      return;
     }
     render();
   });
+  document.getElementById("loginForm").onsubmit = async e=>{
+    e.preventDefault();
+    const form = e.currentTarget;
+    state.loginEmail = form.elements.email.value.trim();
+    state.loginError = "";
+    try{
+      sessionStorage.removeItem("staff_code_profile");
+      await signInWithEmailAndPassword(auth, state.loginEmail, form.elements.password.value);
+    }catch(err){
+      console.error(err);
+      state.loginError = "이메일 또는 비밀번호를 확인해주세요.";
+      render();
+    }
+  };
 }
 
 function renderApp(){
-  const staff = getStaff(state.staffCode);
-  const isAdmin = staff.role === "admin";
-  if(state.activeTab === "입소자 관리" && !isAdmin) state.activeTab = UNITS[0];
+  const staff = state.userProfile;
+  const admin = isAdmin();
+  const adminMenu = canOpenAdminMenu();
+  if(state.activeTab === "입소자 관리" && !adminMenu) state.activeTab = UNITS[0];
   const isMonth = state.activeTab === "전체현황";
   const isAdminPage = state.activeTab === "입소자 관리";
 
@@ -1176,7 +1131,7 @@ function renderApp(){
       <div class="topbar-row">
         <div class="topbar-left">
           <div class="facility">사하의집 · 투약일지</div>
-          <div class="who">${staff.name}${isAdmin ? '<span class="role">관리자</span>':''}</div>
+          <div class="who">${escapeHtml(staff.name)}${admin ? '<span class="role">관리자</span>':''}</div>
         </div>
         <div class="topbar-actions">
           <button class="icon-btn primary" id="printBtn">🖨 인쇄</button>
@@ -1189,6 +1144,9 @@ function renderApp(){
           <input type="month" id="monthInput" value="${state.month}">
           <button class="date-nav" id="nextMonth">›</button>
         </div>
+        <div class="date-row">
+          <select id="weekInput">${monthWeekOptionsHtml()}</select>
+        </div>
       ` : `
         <div class="date-row">
           <button class="date-nav" id="prevDay">‹</button>
@@ -1199,7 +1157,7 @@ function renderApp(){
       <div class="tabs">
         ${UNITS.map(unit => `<div class="tab ${state.activeTab===unit?'active':''}" data-tab="${escapeHtml(unit)}">${escapeHtml(unit)}</div>`).join("")}
         <div class="tab ${state.activeTab==='전체현황'?'active':''}" data-tab="전체현황">전체현황</div>
-        ${isAdmin ? `<div class="tab ${state.activeTab==='입소자 관리'?'active':''}" data-tab="입소자 관리">입소자 관리</div>` : ""}
+        ${adminMenu ? `<div class="tab ${state.activeTab==='입소자 관리'?'active':''}" data-tab="입소자 관리">입소자 관리</div>` : ""}
       </div>
     </div>
     <main>
@@ -1210,9 +1168,9 @@ function renderApp(){
   `;
 
   const root = document.getElementById("viewRoot");
-  root.innerHTML = isAdminPage ? renderAdminHtml() : (isMonth ? renderMonthHtml() : renderDayHtml(state.activeTab, isAdmin));
+  root.innerHTML = isAdminPage ? renderAdminHtml() : (isMonth ? renderMonthHtml() : renderDayHtml(state.activeTab, admin));
 
-  bindCommonEvents(isAdmin, isMonth, isAdminPage);
+  bindCommonEvents(admin, isMonth, isAdminPage);
 }
 
 function printDayHeaderHtml(unit){
@@ -1227,9 +1185,11 @@ function printDayHeaderHtml(unit){
     </div>`;
 }
 function printMonthHeaderHtml(){
+  const week = currentMonthWeek();
+  const label = `${week.idx+1}주차 (${week.days[0]}~${week.days[week.days.length-1]}일)`;
   return `
     <div class="print-header print-only">
-      <h1>투약 서명 전체현황 · ${state.month}</h1>
+      <h1>투약 서명 전체현황 · ${state.month} · ${label}</h1>
       <div class="meta"><span>${UNITS.join(" · ")}</span><span>출력: ${new Date().toLocaleString("ko-KR")}</span></div>
     </div>`;
 }
@@ -1271,8 +1231,8 @@ function residentCardHtml(r, isAdmin){
   const activeTempMeds = tempMedsForDate(r, state.date);
   const medGroups = r.meds.map(g => `
     <div class="med-group">
-      <div class="hosp">${g.hosp}</div>
-      <ul>${g.list.map(m=>`<li>${m}</li>`).join("")}</ul>
+      <div class="hosp">${escapeHtml(g.hosp)}</div>
+      <ul>${g.list.map(m=>`<li>${escapeHtml(m)}</li>`).join("")}</ul>
     </div>`).join("") + activeTempMeds.map(m => `
     <div class="med-group">
       <div class="hosp">추가약 · ${escapeHtml(m.startDate)} ~ ${escapeHtml(m.endDate)}</div>
@@ -1285,17 +1245,17 @@ function residentCardHtml(r, isAdmin){
     const confirmed = hasLog && !!log.confirm;
     const cls = confirmed ? "signed" : (hasLog ? "pending" : "");
     return `
-      <button class="slot-btn ${cls} ${hasLog?'has-log':''} ${isAdmin?'admin-mode':''}" data-rid="${escapeHtml(r.id)}" data-time="${escapeHtml(timeKey)}" data-med-name="${escapeHtml(medInfo?.name || "루틴약")}" data-med-type="${escapeHtml(medInfo?.type || "routine")}" data-temp-med-id="${escapeHtml(medInfo?.tempMedId || "")}">
+      <button class="slot-btn ${cls} ${hasLog?'has-log':''} ${isAdmin?'admin-mode':''}" data-rid="${escapeHtml(r.id)}" data-time="${escapeHtml(timeKey)}" data-med-name="${escapeHtml(medInfo?.name || "정규약")}" data-med-type="${escapeHtml(medInfo?.type || "routine")}" data-temp-med-id="${escapeHtml(medInfo?.tempMedId || "")}">
         <span class="label">${escapeHtml(timeLabel)}</span>
         <span class="med-label">${escapeHtml(medLabel)}</span>
         <span class="tag">${escapeHtml(timeLabel)} · 확인 대기</span>
-        <span class="line admin">${hasLog ? `투약 ${log.administer.name} ${log.administer.ts}` : ""}</span>
-        <span class="line confirm">${confirmed ? `확인 ${log.confirm.name} ${log.confirm.ts}` : ""}</span>
+        <span class="line admin">${hasLog ? `투약 ${escapeHtml(log.administer.name)} ${escapeHtml(log.administer.ts)}` : ""}</span>
+        <span class="line confirm">${confirmed ? `확인 ${escapeHtml(log.confirm.name)} ${escapeHtml(log.confirm.ts)}` : ""}</span>
         ${hasLog ? `<span class="unsign" data-rid="${escapeHtml(r.id)}" data-time="${escapeHtml(timeKey)}">×</span>` : ""}
       </button>`;
   };
   const routineSlots = SLOT_ORDER.filter(t => r.times.includes(t)).map(t=>
-    slotButtonHtml(t, t, "루틴약", { name:"루틴약", type:"routine" })
+    slotButtonHtml(t, t, "정규약", { name:"정규약", type:"routine" })
   ).join("");
   const tempSlots = activeTempMeds.flatMap(m => m.times.map(t =>
     slotButtonHtml(tempSlotKey(m, t), t, m.name, { name:m.name, type:"temporary", tempMedId:m.id })
@@ -1307,8 +1267,8 @@ function residentCardHtml(r, isAdmin){
     <div class="resident-card ${away?'away':''}">
       <div class="resident-head" data-id="${r.id}">
         <div>
-          <div class="resident-name">${r.name}${away ? `<span class="away-badge">귀가/외박</span>`:""}</div>
-          <div class="resident-dx">${r.dx}</div>
+          <div class="resident-name">${escapeHtml(r.name)}${away ? `<span class="away-badge">귀가/외박</span>`:""}</div>
+          <div class="resident-dx">${escapeHtml(r.dx)}</div>
           ${tempBadges ? `<div>${tempBadges}</div>` : ""}
         </div>
         <div class="head-actions">
@@ -1318,7 +1278,7 @@ function residentCardHtml(r, isAdmin){
       </div>
       <div class="med-panel ${open?'open':''}">${medGroups}</div>
       ${away
-        ? `<div class="away-note">🏠 귀가/외박으로 표시됨 (${away.name} · ${away.ts}) — 오늘 투약 없음</div>`
+        ? `<div class="away-note">귀가/외박으로 표시됨 (${escapeHtml(away.name)} · ${escapeHtml(away.ts)}) - 오늘 투약 없음</div>`
         : `<div class="slot-row">${slots}</div>`}
     </div>
   `;
@@ -1333,12 +1293,12 @@ function cellHtml(r, d, row, todayD){
     cls = "away"; content = `<span class="nm">귀가</span>`; title += ` · 귀가/외박 (${awayInfo.name})`;
   }else if(log && log.administer && log.confirm){
     cls = "on";
-    content = `<span class="nm">${log.administer.name}</span><span class="nm nm-confirm">${log.confirm.name}</span>`;
-    title += ` · 투약 ${log.administer.name} ${log.administer.ts} / 확인 ${log.confirm.name} ${log.confirm.ts}`;
+    content = `<span class="nm">${escapeHtml(log.administer.name)}</span><span class="nm nm-confirm">${escapeHtml(log.confirm.name)}</span>`;
+    title += ` · 투약 ${escapeHtml(log.administer.name)} ${escapeHtml(log.administer.ts)} / 확인 ${escapeHtml(log.confirm.name)} ${escapeHtml(log.confirm.ts)}`;
   }else if(log && log.administer){
     cls = "pending";
-    content = `<span class="nm">${log.administer.name}</span><span class="tag">확인대기</span>`;
-    title += ` · 투약 ${log.administer.name} ${log.administer.ts} (확인 대기)`;
+    content = `<span class="nm">${escapeHtml(log.administer.name)}</span><span class="tag">확인대기</span>`;
+    title += ` · 투약 ${escapeHtml(log.administer.name)} ${escapeHtml(log.administer.ts)} (확인 대기)`;
   }else{
     title += " · 미서명";
   }
@@ -1355,10 +1315,39 @@ function halfTableHtml(r, days, todayD, label){
     <div class="half-label">${label}</div>
     <div class="month-table-wrap">
       <table class="month-table">
-        <thead><tr><th>구분</th>${days.map(d=>`<th>${d}</th>`).join("")}</tr></thead>
+        <thead><tr><th>구분</th>${days.map(d=>`<th>${d}일</th>`).join("")}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
+}
+function monthWeekChunks(monthStr){
+  const [y,m] = monthStr.split("-").map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const chunks = [];
+  let start = 1;
+  const firstDow = new Date(y, m-1, 1).getDay();
+  const firstEnd = Math.min(daysInMonth, firstDow === 0 ? 1 : 8 - firstDow);
+  chunks.push(Array.from({length:firstEnd}, (_,i)=> i+1));
+  start = firstEnd + 1;
+  while(start <= daysInMonth){
+    const end = Math.min(daysInMonth, start + 6);
+    chunks.push(Array.from({length:end-start+1}, (_,i)=> start+i));
+    start = end + 1;
+  }
+  return chunks;
+}
+function currentMonthWeek(){
+  const weeks = monthWeekChunks(state.month);
+  const idx = Math.max(0, Math.min(weeks.length - 1, Number(state.monthWeek || 1) - 1));
+  state.monthWeek = String(idx + 1);
+  return { idx, days: weeks[idx], weeks };
+}
+function monthWeekOptionsHtml(){
+  const weeks = monthWeekChunks(state.month);
+  if(Number(state.monthWeek) > weeks.length) state.monthWeek = String(weeks.length);
+  return weeks.map((days, idx)=>
+    `<option value="${idx+1}" ${state.monthWeek===String(idx+1) ? "selected" : ""}>${idx+1}주차 (${days[0]}~${days[days.length-1]}일)</option>`
+  ).join("");
 }
 function monthRows(r){
   const rows = r.times.map(t => ({ key:t, label:t }));
@@ -1386,22 +1375,19 @@ function printMedListHtml(r){
 }
 
 function renderMonthHtml(){
-  const [y,m] = state.month.split("-").map(Number);
-  const daysInMonth = new Date(y, m, 0).getDate();
   const todayD = (state.month === todayStr().slice(0,7)) ? Number(todayStr().slice(8,10)) : -1;
-  const allDays = Array.from({length:daysInMonth}, (_,i)=> i+1);
-  const firstHalf = allDays.filter(d=> d<=15);
-  const secondHalf = allDays.filter(d=> d>15);
+  const week = currentMonthWeek();
+  const days = week.days;
+  const weekLabel = `${week.idx+1}주차 (${days[0]}~${days[days.length-1]}일)`;
 
   return UNITS.map(unit=>{
     const list = getResidents(unit);
     const cards = list.map(r=>{
       return `
         <div class="month-card">
-          <div class="mc-head"><span class="mc-name">${r.name}</span><span class="mc-dx">${r.dx}</span></div>
+          <div class="mc-head"><span class="mc-name">${escapeHtml(r.name)}</span><span class="mc-dx">${escapeHtml(r.dx)}</span></div>
           ${printMedListHtml(r)}
-          ${halfTableHtml(r, firstHalf, todayD, `1 ~ 15일`)}
-          ${halfTableHtml(r, secondHalf, todayD, `16 ~ ${daysInMonth}일`)}
+          ${halfTableHtml(r, days, todayD, weekLabel)}
           <div class="legend-note print-only">※ 붉은색 : 투약자, 검은색 : 확인자</div>
           <div class="print-approval print-only">
             <div class="approval-box">
@@ -1448,20 +1434,20 @@ function residentFormHtml(resident=null){
 function tempMedFormHtml(resident){
   return `
     <form class="admin-form add-temp-med-form" data-rid="${escapeHtml(resident.id)}">
-      <label>추가약 이름<input name="tempMedName" placeholder="예: 감기약 3일분" required></label>
+      <label>처방약 이름<input name="tempMedName" placeholder="예: 감기약 3일분" required></label>
       <label>메모<input name="tempMedNote" placeholder="예: 식후 복용"></label>
       <label>시작일<input type="date" name="tempStartDate" value="${state.date}"></label>
       <label>종료일<input type="date" name="tempEndDate" value="${state.date}"></label>
       <div class="wide time-checks">${timeChecksHtml({ times:["아침","점심","저녁"] })}</div>
-      <button class="small-btn wide" type="submit">추가약 등록</button>
+      <button class="small-btn wide" type="submit">지금 처방받은약 등록</button>
     </form>`;
 }
 function routineMedAddFormHtml(resident){
   return `
     <form class="routine-med-form add-routine-med-form" data-rid="${escapeHtml(resident.id)}">
       <input name="routineHosp" placeholder="병원/분류">
-      <input name="routineMed" placeholder="추가할 루틴약">
-      <button class="small-btn" type="submit">루틴약 추가</button>
+      <input name="routineMed" placeholder="추가할 정규약">
+      <button class="small-btn" type="submit">정규약 추가</button>
       <span></span>
     </form>`;
 }
@@ -1469,7 +1455,7 @@ function routineMedRowHtml(residentId, hosp, med){
   return `
     <form class="routine-med-form edit-routine-med-form" data-rid="${escapeHtml(residentId)}" data-old-hosp="${escapeHtml(hosp)}" data-old-med="${escapeHtml(med)}">
       <input name="routineHosp" value="${escapeHtml(hosp)}" aria-label="병원/분류">
-      <input name="routineMed" value="${escapeHtml(med)}" aria-label="루틴약">
+      <input name="routineMed" value="${escapeHtml(med)}" aria-label="정규약">
       <button class="small-btn" type="submit">변경 저장</button>
       <button class="small-btn danger" type="button" data-delete-med="${escapeHtml(residentId)}" data-hosp="${escapeHtml(hosp)}" data-med="${escapeHtml(med)}">약 삭제</button>
     </form>`;
@@ -1480,16 +1466,28 @@ function staffFormHtml(code="", staff=null){
     <form class="admin-form ${editing ? 'edit-staff-form' : 'add-staff-form'}" ${editing ? `data-code="${escapeHtml(code)}"` : ""}>
       <label>번호<input name="staffCode" value="${escapeHtml(code)}" ${editing ? "readonly" : ""} maxlength="4" inputmode="numeric" placeholder="4자리"></label>
       <label>이름<input name="staffName" value="${escapeHtml(staff?.name || "")}" required></label>
-      <label class="wide">권한
-        <select name="staffRole">
-          <option value="staff" ${staff?.role !== "admin" ? "selected" : ""}>일반 담당자</option>
-          <option value="admin" ${staff?.role === "admin" ? "selected" : ""}>관리자</option>
-        </select>
-      </label>
       <button class="icon-btn primary wide" type="submit">${editing ? "담당자 수정 저장" : "담당자 추가"}</button>
     </form>`;
 }
 function renderAdminHtml(){
+  if(!isAdmin()){
+    return `
+      <div class="admin-panel">
+        <section class="admin-section">
+          <h2>관리자 권한 설정 필요</h2>
+          <div class="admin-empty" style="text-align:left; line-height:1.7;">
+            관리자 이메일로 로그인은 되었지만, Firestore <b>users</b> 컬렉션에서 관리자 권한을 아직 확인하지 못했습니다.<br>
+            Firebase 콘솔에서 <b>users</b> 컬렉션에 아래 문서 ID로 문서를 만들고 <b>role</b> 값을 <b>admin</b>으로 저장해주세요.<br><br>
+            이메일: <b>${escapeHtml(state.currentUser?.email || "")}</b><br>
+            문서 ID: <b>${escapeHtml(state.currentUser?.uid || "")}</b><br><br>
+            필요한 필드:<br>
+            name = 관리자 이름<br>
+            role = admin<br><br>
+            <button class="icon-btn primary" id="refreshAdminRoleBtn" type="button">관리자 권한 다시 확인</button>
+          </div>
+        </section>
+      </div>`;
+  }
   if(state.residentsLoading) return `<div class="empty">입소자 정보를 불러오는 중입니다.</div>`;
   const residents = state.residents;
   const staffEntries = Object.entries(state.staff).sort(([aCode,a],[bCode,b]) =>
@@ -1502,7 +1500,7 @@ function renderAdminHtml(){
         <div class="admin-card-head">
           <div>
             <div class="admin-title">${escapeHtml(staff.name)} <span class="admin-meta">${escapeHtml(code)}</span></div>
-            <div class="admin-meta">${staff.role === "admin" ? "관리자" : "일반 담당자"}</div>
+            <div class="admin-meta">일반 담당자</div>
           </div>
           <div class="admin-actions">
             <button class="small-btn danger" data-delete-staff="${escapeHtml(code)}">담당자 삭제</button>
@@ -1528,19 +1526,19 @@ function renderAdminHtml(){
         </div>
         ${residentFormHtml(r)}
         <div class="temp-med-edit">
-          <div class="admin-meta">루틴약 추가/변경</div>
+          <div class="admin-meta">정규약 추가 · 변경 · 삭제</div>
           ${routineMedAddFormHtml(r)}
-          ${meds || `<div class="admin-empty">등록된 루틴약이 없습니다.</div>`}
+          ${meds || `<div class="admin-empty">등록된 정규약이 없습니다.</div>`}
         </div>
         <div class="temp-med-edit">
-          <div class="admin-meta">추가약</div>
+          <div class="admin-meta">지금 처방받은약 입력</div>
           ${tempMedFormHtml(r)}
           ${(r.tempMeds || []).map(m => `
             <div class="med-edit">
               <span>${escapeHtml(m.name)} · ${escapeHtml(m.startDate)}~${escapeHtml(m.endDate)} · ${m.times.map(escapeHtml).join(", ")}${m.note ? ` · ${escapeHtml(m.note)}` : ""}</span>
-              <button class="small-btn danger" data-delete-temp-med="${escapeHtml(r.id)}" data-temp-med-id="${escapeHtml(m.id)}">추가약 삭제</button>
+              <button class="small-btn danger" data-delete-temp-med="${escapeHtml(r.id)}" data-temp-med-id="${escapeHtml(m.id)}">처방약 삭제</button>
             </div>
-          `).join("") || `<div class="admin-empty">등록된 추가약이 없습니다.</div>`}
+          `).join("") || `<div class="admin-empty">등록된 처방약이 없습니다.</div>`}
         </div>
       </div>`;
   }).join("") : `<div class="admin-empty">등록된 입소자가 없습니다.</div>`;
@@ -1568,11 +1566,10 @@ function renderAdminHtml(){
 
 function bindCommonEvents(isAdmin, isMonth, isAdminPage){
   document.getElementById("logoutBtn").onclick = ()=>{
-    sessionStorage.removeItem("medlog_code");
-    state.staffCode = null;
+    sessionStorage.removeItem("staff_code_profile");
+    signOut(auth);
     [state.unsubDay, state.unsubMonth, state.unsubAwayDay, state.unsubAwayMonth, state.unsubResidents].forEach(u=>{ if(u) u(); });
     state.unsubDay = state.unsubMonth = state.unsubAwayDay = state.unsubAwayMonth = state.unsubResidents = null;
-    render();
   };
   document.getElementById("printBtn").onclick = ()=> window.print();
 
@@ -1598,6 +1595,20 @@ function bindCommonEvents(isAdmin, isMonth, isAdminPage){
   });
 
   if(isAdminPage){
+    const refreshAdminRoleBtn = document.getElementById("refreshAdminRoleBtn");
+    if(refreshAdminRoleBtn){
+      refreshAdminRoleBtn.onclick = async ()=>{
+        state.userProfile = await loadUserProfile(state.currentUser);
+        if(isAdmin()){
+          showToast("관리자 권한이 확인되었습니다.");
+          subscribeStaff();
+          subscribeResidents();
+        }else{
+          showToast("아직 관리자 권한을 확인하지 못했습니다.");
+        }
+        render();
+      };
+    }
     document.querySelectorAll(".add-resident-form,.edit-resident-form").forEach(form=>{
       form.onsubmit = async e=>{
         e.preventDefault();
@@ -1646,7 +1657,12 @@ function bindCommonEvents(isAdmin, isMonth, isAdminPage){
   if(isMonth){
     document.getElementById("monthInput").onchange = e=>{
       state.month = e.target.value;
+      state.monthWeek = "1";
       subscribeMonth(state.month);
+      render();
+    };
+    document.getElementById("weekInput").onchange = e=>{
+      state.monthWeek = e.target.value;
       render();
     };
     document.getElementById("prevMonth").onclick = ()=> shiftMonth(-1);
@@ -1681,7 +1697,7 @@ function bindCommonEvents(isAdmin, isMonth, isAdminPage){
         const resident = findResident(rid);
         b.classList.add("stamping");
         handleSlotClick(resident, time, {
-          name: b.dataset.medName || "루틴약",
+          name: b.dataset.medName || "정규약",
           type: b.dataset.medType || "routine",
           tempMedId: b.dataset.tempMedId || null
         });
@@ -1712,17 +1728,45 @@ function shiftMonth(delta){
   const d = new Date(y, m-1+delta, 1);
   const p = n => String(n).padStart(2,"0");
   state.month = `${d.getFullYear()}-${p(d.getMonth()+1)}`;
+  state.monthWeek = "1";
   subscribeMonth(state.month);
   render();
 }
 
-subscribeStaff();
-if(state.staffCode){
-  subscribeResidents();
-  if(state.activeTab === "전체현황"){ subscribeMonth(state.month); }
-  else{ subscribeDate(state.date); }
+if(firebaseReady && auth){
+  onAuthStateChanged(auth, async user=>{
+    try{
+      [state.unsubDay, state.unsubMonth, state.unsubAwayDay, state.unsubAwayMonth, state.unsubResidents, state.unsubStaff].forEach(u=>{ if(u) u(); });
+      state.unsubDay = state.unsubMonth = state.unsubAwayDay = state.unsubAwayMonth = state.unsubResidents = state.unsubStaff = null;
+      state.currentUser = user;
+      if(user?.isAnonymous){
+        try{
+          state.userProfile = JSON.parse(sessionStorage.getItem("staff_code_profile") || "null");
+        }catch(_){ state.userProfile = null; }
+      }else{
+        state.userProfile = user ? await loadUserProfile(user) : null;
+      }
+      state.authReady = true;
+      if(user && state.userProfile){
+        subscribeStaff();
+        subscribeResidents();
+        if(state.activeTab === "전체현황"){ subscribeMonth(state.month); }
+        else if(state.activeTab !== "입소자 관리"){ subscribeDate(state.date); }
+      }
+    }catch(err){
+      console.error(err);
+      state.currentUser = null;
+      state.userProfile = null;
+      state.authReady = true;
+    }
+    render();
+  });
+}else{
+  state.authReady = true;
+  render();
 }
 render();
 </script>
 </body>
 </html>
+
