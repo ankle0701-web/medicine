@@ -598,6 +598,12 @@ function tempMedsForMonth(resident, monthStr){
   const start = `${monthStr}-01`;
   return ownedTempMeds(resident).filter(m => m.startDate <= end && m.endDate >= start);
 }
+function tempMedsForDays(resident, monthStr, days){
+  if(!days?.length) return [];
+  const start = `${monthStr}-${String(days[0]).padStart(2,"0")}`;
+  const end = `${monthStr}-${String(days[days.length - 1]).padStart(2,"0")}`;
+  return ownedTempMeds(resident).filter(m => m.startDate <= end && m.endDate >= start);
+}
 function tempSlotKey(tempMed, time){
   return `추가약:${tempMed.id}:${time}`;
 }
@@ -622,6 +628,28 @@ function medicationSnapshot(resident, medInfo){
     routineMeds: cloneData(resident.meds || []),
     temporaryMed: null
   };
+}
+function medicationCheckText(resident, time, medInfo=null){
+  if(medInfo?.type === "temporary"){
+    const temp = ownedTempMeds(resident).find(m => m.id === medInfo.tempMedId);
+    return temp
+      ? `처방약: ${temp.name}\n기간: ${temp.startDate} ~ ${temp.endDate}\n시간: ${temp.times.join(", ")}${temp.note ? `\n메모: ${temp.note}` : ""}`
+      : `처방약: ${medInfo?.name || "처방약"}`;
+  }
+  const routine = (resident.meds || []).flatMap(g => (g.list || []).map(m => `${g.hosp}: ${m}`));
+  return routine.length
+    ? `정규약:\n${routine.join("\n")}`
+    : "정규약: 등록된 약 목록이 없습니다.";
+}
+function confirmMedicationSignature(resident, time, medInfo=null, stepLabel="서명"){
+  const message =
+    `[${stepLabel} 전 확인]\n\n` +
+    `복용자: ${resident.name}\n` +
+    `생활실: ${resident.unit}\n` +
+    `투약시간: ${time}\n\n` +
+    `${medicationCheckText(resident, time, medInfo)}\n\n` +
+    "복용자 이름과 현재 복용해야 하는 약이 맞는지 확인하셨습니까?";
+  return confirm(message);
 }
 function normalizeStaff(v){
   return { name: v.name || "", email: v.email || "", role: v.role === "admin" ? "admin" : "staff" };
@@ -1030,6 +1058,7 @@ async function handleSlotClick(resident, time, medInfo=null){
   const medSnapshot = medicationSnapshot(resident, medInfo);
 
   if(!log.administer){
+    if(!confirmMedicationSignature(resident, time, medInfo, "투약자 서명")) return;
     await setDoc(ref, {
       residentId: resident.id, residentName: resident.name, unit: resident.unit,
       diagnosis: resident.dx || "",
@@ -1048,6 +1077,7 @@ async function handleSlotClick(resident, time, medInfo=null){
       showToast("투약자와 다른 담당자가 확인해야 합니다.");
       return;
     }
+    if(!confirmMedicationSignature(resident, time, medInfo, "확인자 서명")) return;
     await setDoc(ref, {
       confirm: { name: staff.name, uid: staff.uid, email: staff.email, ts: nowLabel() },
       updatedAt: serverTimestamp()
@@ -1348,7 +1378,7 @@ function cellHtml(r, d, row, todayD){
 }
 
 function halfTableHtml(r, days, todayD, label){
-  const rows = monthRows(r).map(row=>{
+  const rows = monthRows(r, days).map(row=>{
     const cells = days.map(d=> cellHtml(r, d, row, todayD)).join("");
     return `<tr><th>${escapeHtml(row.label)}</th>${cells}</tr>`;
   }).join("");
@@ -1383,6 +1413,17 @@ function currentMonthWeek(){
   state.monthWeek = String(idx + 1);
   return { idx, days: weeks[idx], weeks };
 }
+function weekNumberForDate(dateStr){
+  const monthStr = dateStr.slice(0,7);
+  const day = Number(dateStr.slice(8,10));
+  const weeks = monthWeekChunks(monthStr);
+  const idx = weeks.findIndex(days => days.includes(day));
+  return idx >= 0 ? String(idx + 1) : "1";
+}
+function syncMonthToSelectedDate(){
+  state.month = state.date.slice(0,7);
+  state.monthWeek = weekNumberForDate(state.date);
+}
 function monthWeekOptionsHtml(){
   const weeks = monthWeekChunks(state.month);
   if(Number(state.monthWeek) > weeks.length) state.monthWeek = String(weeks.length);
@@ -1390,9 +1431,10 @@ function monthWeekOptionsHtml(){
     `<option value="${idx+1}" ${state.monthWeek===String(idx+1) ? "selected" : ""}>${idx+1}주차 (${days[0]}~${days[days.length-1]}일)</option>`
   ).join("");
 }
-function monthRows(r){
+function monthRows(r, days=null){
   const rows = r.times.map(t => ({ key:t, label:t }));
-  tempMedsForMonth(r, state.month).forEach(m=>{
+  const tempMeds = days ? tempMedsForDays(r, state.month, days) : tempMedsForMonth(r, state.month);
+  tempMeds.forEach(m=>{
     m.times.forEach(t=>{
       rows.push({
         key: tempSlotKey(m, t),
@@ -1403,9 +1445,10 @@ function monthRows(r){
   });
   return rows;
 }
-function printMedListHtml(r){
+function printMedListHtml(r, days=null){
   const routine = (r.meds || []).flatMap(g => (g.list || []).map(m => `${g.hosp}: ${m}`));
-  const temp = tempMedsForMonth(r, state.month).map(m =>
+  const tempMeds = days ? tempMedsForDays(r, state.month, days) : tempMedsForMonth(r, state.month);
+  const temp = tempMeds.map(m =>
     `추가약 ${m.startDate}~${m.endDate} ${m.name} (${m.times.join(", ")})${m.note ? ` - ${m.note}` : ""}`
   );
   const items = [
@@ -1427,7 +1470,7 @@ function renderMonthHtml(){
       return `
         <div class="month-card">
           <div class="mc-head"><span class="mc-name">${escapeHtml(r.name)}</span><span class="mc-dx">${escapeHtml(r.dx)}</span></div>
-          ${printMedListHtml(r)}
+          ${printMedListHtml(r, days)}
           ${halfTableHtml(r, days, todayD, weekLabel)}
           <div class="legend-note print-only">※ 붉은색 : 투약자, 검은색 : 확인자</div>
           <div class="print-approval print-only">
@@ -1625,6 +1668,7 @@ function bindCommonEvents(isAdmin, isMonth, isAdminPage){
       }else if(state.activeTab === "전체현황"){
         if(state.unsubDay){ state.unsubDay(); state.unsubDay=null; }
         if(state.unsubAwayDay){ state.unsubAwayDay(); state.unsubAwayDay=null; }
+        syncMonthToSelectedDate();
         subscribeMonth(state.month);
       }else{
         if(state.unsubMonth){ state.unsubMonth(); state.unsubMonth=null; }
@@ -1698,7 +1742,7 @@ function bindCommonEvents(isAdmin, isMonth, isAdminPage){
   if(isMonth){
     document.getElementById("monthInput").onchange = e=>{
       state.month = e.target.value;
-      state.monthWeek = "1";
+      state.monthWeek = state.month === state.date.slice(0,7) ? weekNumberForDate(state.date) : "1";
       subscribeMonth(state.month);
       render();
     };
