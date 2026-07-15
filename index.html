@@ -161,6 +161,12 @@
 
   .slot-row{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;}
   .slot-row.hidden{display:none;}
+  .slot-row.temp-slot-row{
+    margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);
+  }
+  .temp-slot-label{
+    width:100%; font-size:11px; font-weight:800; color:#96701F; margin-bottom:-2px;
+  }
   .slot-btn{
     flex:1; min-width:96px; border-radius:12px; border:1.5px solid var(--border);
     background:var(--bg); padding:10px 8px; text-align:center; position:relative;
@@ -524,6 +530,8 @@ function normalizeResident(v, id){
     })) : [],
     tempMeds: Array.isArray(v.tempMeds) ? v.tempMeds.map(m=>({
       id: m.id || `temp_${Date.now()}`,
+      residentId: m.residentId || "",
+      residentName: m.residentName || "",
       name: m.name || "추가약",
       note: m.note || "",
       startDate: m.startDate || todayStr(),
@@ -541,7 +549,24 @@ function mergeResidents(remoteResidents){
   const merged = new Map(defaultResidents().map(r => [r.id, r]));
   remoteResidents.forEach(r => {
     if(r.hidden) merged.delete(r.id);
-    else merged.set(r.id, r);
+    else{
+      const base = merged.get(r.id);
+      if(base){
+        merged.set(r.id, {
+          ...base,
+          ...r,
+          unit: r.unit || base.unit,
+          name: r.name || base.name,
+          dx: r.dx || base.dx,
+          times: r.times?.length ? r.times : base.times,
+          meds: r.meds?.length ? r.meds : base.meds,
+          tempMeds: Array.isArray(r.tempMeds) ? r.tempMeds : base.tempMeds,
+          sortOrder: r.sortOrder !== 999 ? r.sortOrder : base.sortOrder
+        });
+      }else{
+        merged.set(r.id, r);
+      }
+    }
   });
   return Array.from(merged.values()).sort((a,b)=>
     (UNITS.indexOf(a.unit) - UNITS.indexOf(b.unit)) ||
@@ -558,14 +583,20 @@ function findResident(id){
 function dateInRange(dateStr, startDate, endDate){
   return dateStr >= startDate && dateStr <= endDate;
 }
+function tempMedBelongsTo(resident, tempMed){
+  return tempMed?.residentId === resident.id;
+}
+function ownedTempMeds(resident){
+  return (resident.tempMeds || []).filter(m => tempMedBelongsTo(resident, m));
+}
 function tempMedsForDate(resident, dateStr){
-  return (resident.tempMeds || []).filter(m => dateInRange(dateStr, m.startDate, m.endDate));
+  return ownedTempMeds(resident).filter(m => dateInRange(dateStr, m.startDate, m.endDate));
 }
 function tempMedsForMonth(resident, monthStr){
   const [y,m] = monthStr.split("-").map(Number);
   const end = `${monthStr}-${String(new Date(y, m, 0).getDate()).padStart(2,"0")}`;
   const start = `${monthStr}-01`;
-  return (resident.tempMeds || []).filter(m => m.startDate <= end && m.endDate >= start);
+  return ownedTempMeds(resident).filter(m => m.startDate <= end && m.endDate >= start);
 }
 function tempSlotKey(tempMed, time){
   return `추가약:${tempMed.id}:${time}`;
@@ -579,7 +610,7 @@ function logKeyFor(residentId, time){
 function medicationSnapshot(resident, medInfo){
   const version = resident.medicationVersion || resident.updatedAt?.seconds || "unversioned";
   if(medInfo?.type === "temporary"){
-    const temp = (resident.tempMeds || []).find(m => m.id === medInfo.tempMedId) || null;
+    const temp = ownedTempMeds(resident).find(m => m.id === medInfo.tempMedId) || null;
     return {
       medicationVersion: version,
       routineMeds: null,
@@ -632,7 +663,16 @@ async function loginWithStaffCode(code){
     render();
   }catch(err){
     console.error(err);
-    state.loginError = "직원 번호 로그인을 할 수 없습니다.";
+    if(err.code === "auth/admin-restricted-operation" || err.code === "auth/operation-not-allowed"){
+      state.loginError = "Firebase Authentication에서 Anonymous 로그인을 켜주세요.";
+    }else if(err.code === "permission-denied"){
+      state.loginError = "직원 번호를 읽을 권한이 없습니다. Firestore 규칙을 확인해주세요.";
+    }else if(err.code === "unavailable"){
+      state.loginError = "인터넷 연결 또는 Firebase 연결을 확인해주세요.";
+    }else{
+      state.loginError = `직원 번호 로그인을 할 수 없습니다. (${err.code || "오류"})`;
+    }
+    state.enteringCode = "";
     render();
   }
 }
@@ -837,7 +877,7 @@ async function saveTempMedFromForm(form, residentId){
   if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
   const resident = findResident(residentId);
   if(!resident) return;
-  const before = cloneData(resident.tempMeds || []);
+  const before = cloneData(ownedTempMeds(resident));
   const name = form.elements.tempMedName.value.trim();
   const startDate = form.elements.tempStartDate.value;
   const endDate = form.elements.tempEndDate.value;
@@ -846,9 +886,11 @@ async function saveTempMedFromForm(form, residentId){
   if(!startDate || !endDate || startDate > endDate){ showToast("추가약 날짜를 확인해주세요."); return; }
   if(times.length === 0){ showToast("추가약 투약시간을 선택해주세요."); return; }
   const tempMeds = [
-    ...(resident.tempMeds || []),
+    ...ownedTempMeds(resident),
     {
       id: `temp_${Date.now()}`,
+      residentId: resident.id,
+      residentName: resident.name,
       name,
       note: form.elements.tempMedNote.value.trim(),
       startDate,
@@ -865,8 +907,8 @@ async function deleteTempMed(residentId, tempMedId){
   if(!requireAdmin()) return;
   const resident = findResident(residentId);
   if(!resident) return;
-  const before = cloneData(resident.tempMeds || []);
-  const tempMeds = (resident.tempMeds || []).filter(m => m.id !== tempMedId);
+  const before = cloneData(ownedTempMeds(resident));
+  const tempMeds = ownedTempMeds(resident).filter(m => m.id !== tempMedId);
   await setDoc(residentRef(residentId), { tempMeds, updatedAt: serverTimestamp() }, { merge:true });
   await writeAudit("temporaryMed.delete", resident, before, tempMeds);
   showToast("추가약을 삭제했습니다.");
@@ -1258,10 +1300,9 @@ function residentCardHtml(r, isAdmin){
     slotButtonHtml(t, t, "정규약", { name:"정규약", type:"routine" })
   ).join("");
   const tempSlots = activeTempMeds.flatMap(m => m.times.map(t =>
-    slotButtonHtml(tempSlotKey(m, t), t, m.name, { name:m.name, type:"temporary", tempMedId:m.id })
+    slotButtonHtml(tempSlotKey(m, t), t, `${r.name} · ${m.name}`, { name:m.name, type:"temporary", tempMedId:m.id })
   )).join("");
-  const slots = routineSlots + tempSlots;
-  const tempBadges = activeTempMeds.map(m => `<span class="temp-med-badge">추가약 ${escapeHtml(m.name)} · ${m.times.map(escapeHtml).join(", ")}</span>`).join("");
+  const tempBadges = activeTempMeds.map(m => `<span class="temp-med-badge">처방약 ${escapeHtml(r.name)} · ${escapeHtml(m.name)} · ${m.times.map(escapeHtml).join(", ")}</span>`).join("");
 
   return `
     <div class="resident-card ${away?'away':''}">
@@ -1279,7 +1320,7 @@ function residentCardHtml(r, isAdmin){
       <div class="med-panel ${open?'open':''}">${medGroups}</div>
       ${away
         ? `<div class="away-note">귀가/외박으로 표시됨 (${escapeHtml(away.name)} · ${escapeHtml(away.ts)}) - 오늘 투약 없음</div>`
-        : `<div class="slot-row">${slots}</div>`}
+        : `<div class="slot-row">${routineSlots}</div>${tempSlots ? `<div class="slot-row temp-slot-row"><div class="temp-slot-label">지금 처방받은약 · ${escapeHtml(r.name)}</div>${tempSlots}</div>` : ""}`}
     </div>
   `;
 }
@@ -1533,7 +1574,7 @@ function renderAdminHtml(){
         <div class="temp-med-edit">
           <div class="admin-meta">지금 처방받은약 입력</div>
           ${tempMedFormHtml(r)}
-          ${(r.tempMeds || []).map(m => `
+          ${ownedTempMeds(r).map(m => `
             <div class="med-edit">
               <span>${escapeHtml(m.name)} · ${escapeHtml(m.startDate)}~${escapeHtml(m.endDate)} · ${m.times.map(escapeHtml).join(", ")}${m.note ? ` · ${escapeHtml(m.note)}` : ""}</span>
               <button class="small-btn danger" data-delete-temp-med="${escapeHtml(r.id)}" data-temp-med-id="${escapeHtml(m.id)}">처방약 삭제</button>
@@ -1546,20 +1587,20 @@ function renderAdminHtml(){
   return `
     <div class="admin-panel">
       <section class="admin-section">
-        <h2>담당자 추가</h2>
-        ${staffFormHtml()}
-      </section>
-      <section class="admin-section">
-        <h2>담당자 목록</h2>
-        <div class="admin-list">${staffHtml || `<div class="admin-empty">등록된 담당자가 없습니다.</div>`}</div>
-      </section>
-      <section class="admin-section">
         <h2>입소자 추가</h2>
         ${residentFormHtml()}
       </section>
       <section class="admin-section">
         <h2>입소자 목록</h2>
         <div class="admin-list">${listHtml}</div>
+      </section>
+      <section class="admin-section">
+        <h2>담당자 추가</h2>
+        ${staffFormHtml()}
+      </section>
+      <section class="admin-section">
+        <h2>담당자 목록</h2>
+        <div class="admin-list">${staffHtml || `<div class="admin-empty">등록된 담당자가 없습니다.</div>`}</div>
       </section>
     </div>`;
 }
