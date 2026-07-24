@@ -202,7 +202,7 @@
     background:var(--slate-dark); color:#fff; font-size:11px; border:2px solid var(--surface);
     display:none; align-items:center; justify-content:center; line-height:1;
   }
-  .slot-btn.has-log.admin-mode .unsign{display:flex;}
+  .slot-btn.has-log .unsign{display:flex;}
 
   .toast{
     position:fixed; left:50%; bottom:28px; transform:translateX(-50%);
@@ -1058,7 +1058,6 @@ async function handleSlotClick(resident, time, medInfo=null){
   const medSnapshot = medicationSnapshot(resident, medInfo);
 
   if(!log.administer){
-    if(!confirmMedicationSignature(resident, time, medInfo, "투약자 서명")) return;
     await setDoc(ref, {
       residentId: resident.id, residentName: resident.name, unit: resident.unit,
       diagnosis: resident.dx || "",
@@ -1077,7 +1076,6 @@ async function handleSlotClick(resident, time, medInfo=null){
       showToast("투약자와 다른 담당자가 확인해야 합니다.");
       return;
     }
-    if(!confirmMedicationSignature(resident, time, medInfo, "확인자 서명")) return;
     await setDoc(ref, {
       confirm: { name: staff.name, uid: staff.uid, email: staff.email, ts: nowLabel() },
       updatedAt: serverTimestamp()
@@ -1089,15 +1087,36 @@ async function handleSlotClick(resident, time, medInfo=null){
 }
 
 async function unsignSlot(resident, time){
-  if(!requireAdmin()) return;
+  if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
   if(!resident){ showToast("입소자 정보를 찾을 수 없습니다."); return; }
-  const reason = prompt("투약서명 초기화 사유를 입력해주세요.");
-  if(!reason || !reason.trim()){ showToast("초기화 사유가 필요합니다."); return; }
+  if(!confirm(`${resident.name} · ${time} 서명을 취소할까요?`)) return;
   const docId = `${resident.id}_${state.date}_${time}`;
+  const ref = doc(db, "medLogs", docId);
   const before = state.logs[logKeyFor(resident.id, time)] || null;
-  await deleteDoc(doc(db, "medLogs", docId));
-  await writeAudit("medLog.unsign", resident, before, null, { reason: reason.trim() });
-  showToast(`${resident.name} · ${time} 서명을 초기화했습니다.`);
+  try{
+    await setDoc(ref, {
+      residentId: resident.id,
+      residentName: resident.name,
+      unit: resident.unit,
+      diagnosis: resident.dx || "",
+      date: state.date,
+      time,
+      administer: null,
+      confirm: null,
+      cancelledBy: actorInfo(),
+      cancelledAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }, { merge:true });
+    try{
+      await writeAudit("medLog.unsign", resident, before, null, { reason: "직원 서명 취소" });
+    }catch(auditErr){
+      console.error(auditErr);
+    }
+    showToast(`${resident.name} · ${time} 서명을 취소했습니다.`);
+  }catch(err){
+    console.error(err);
+    showToast("서명을 취소하지 못했습니다. Firestore 규칙을 확인해주세요.");
+  }
 }
 
 async function toggleAway(resident){
@@ -1791,7 +1810,6 @@ function bindCommonEvents(isAdmin, isMonth, isAdminPage){
     document.querySelectorAll(".unsign").forEach(u=>{
       u.onclick = (e)=>{
         e.stopPropagation();
-        if(!isAdmin) return;
         const rid = u.dataset.rid, time = u.dataset.time;
         const resident = findResident(rid);
         unsignSlot(resident, time);
