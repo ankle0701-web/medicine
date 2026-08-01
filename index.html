@@ -232,6 +232,7 @@
     padding:9px 10px; font-family:inherit; font-size:13px; width:100%;
   }
   .admin-form textarea{min-height:78px; resize:vertical;}
+  .admin-form small,.routine-med-form small{font-size:10.5px; color:var(--muted); line-height:1.45; font-weight:500;}
   .admin-form .wide{grid-column:1/-1;}
   .time-checks{display:grid; grid-template-columns:repeat(4,1fr); gap:6px;}
   .time-check{display:flex !important; flex-direction:row !important; align-items:center; gap:6px !important;}
@@ -261,6 +262,12 @@
     border:1px dashed var(--border); border-radius:10px; padding:10px; margin-top:10px;
     background:var(--bg);
   }
+  .routine-med-form textarea{
+    border:1px solid var(--border); border-radius:9px; background:var(--bg); color:var(--text);
+    padding:8px 9px; font-family:inherit; font-size:12px; width:100%; min-height:78px; resize:vertical;
+  }
+  .add-routine-med-form{grid-template-columns:1fr auto; align-items:start; margin-bottom:8px;}
+  .add-routine-med-form small{grid-column:1/-1;}
   .temp-med-edit .admin-meta{
     font-size:12px; font-weight:800; color:var(--slate-dark); margin:0 0 8px;
   }
@@ -533,6 +540,12 @@ function normalizeResident(v, id){
       residentId: m.residentId || "",
       residentName: m.residentName || "",
       name: m.name || "추가약",
+      hosp: m.hosp || "",
+      list: Array.isArray(m.list) && m.list.length ? m.list.filter(Boolean) : [m.name || "추가약"],
+      meds: Array.isArray(m.meds) ? m.meds.map(g => ({
+        hosp: g.hosp || "약",
+        list: Array.isArray(g.list) ? g.list.filter(Boolean) : []
+      })).filter(g => g.list.length) : [],
       note: m.note || "",
       startDate: m.startDate || todayStr(),
       endDate: m.endDate || m.startDate || todayStr(),
@@ -610,6 +623,10 @@ function tempSlotKey(tempMed, time){
 function tempSlotTitle(tempMed, time){
   return `${tempMed.name} · ${time}`;
 }
+function tempMedGroups(tempMed){
+  if(Array.isArray(tempMed?.meds) && tempMed.meds.length) return tempMed.meds;
+  return [{ hosp: tempMed?.hosp || "추가약", list: Array.isArray(tempMed?.list) && tempMed.list.length ? tempMed.list : [tempMed?.name || "추가약"] }];
+}
 function logKeyFor(residentId, time){
   return `${residentId}_${time}`;
 }
@@ -633,7 +650,7 @@ function medicationCheckText(resident, time, medInfo=null){
   if(medInfo?.type === "temporary"){
     const temp = ownedTempMeds(resident).find(m => m.id === medInfo.tempMedId);
     return temp
-      ? `처방약: ${temp.name}\n기간: ${temp.startDate} ~ ${temp.endDate}\n시간: ${temp.times.join(", ")}${temp.note ? `\n메모: ${temp.note}` : ""}`
+      ? `처방약:\n${tempMedGroups(temp).flatMap(g => [g.hosp, ...g.list.map(m => `- ${m}`)]).join("\n")}\n기간: ${temp.startDate} ~ ${temp.endDate}\n시간: ${temp.times.join(", ")}${temp.note ? `\n메모: ${temp.note}` : ""}`
       : `처방약: ${medInfo?.name || "처방약"}`;
   }
   const routine = (resident.meds || []).flatMap(g => (g.list || []).map(m => `${g.hosp}: ${m}`));
@@ -801,19 +818,33 @@ function medRowsFromText(text){
     .filter(Boolean);
 }
 function medsToText(meds){
-  return (meds || []).flatMap(g => (g.list || []).map(m => `${g.hosp} | ${m}`)).join("\n");
+  return (meds || []).flatMap(g => [g.hosp || "약", ...(g.list || [])]).join("\n");
 }
 function textToMeds(text){
   const groups = [];
-  medRowsFromText(text).forEach(row=>{
+  const rows = medRowsFromText(text);
+  let currentGroup = null;
+  rows.forEach((row, index)=>{
     const [hospRaw, ...medParts] = row.split("|");
-    const hosp = medParts.length ? hospRaw.trim() : "약";
-    const med = (medParts.length ? medParts.join("|") : hospRaw).trim();
-    let group = groups.find(g => g.hosp === hosp);
-    if(!group){ group = { hosp, list: [] }; groups.push(group); }
-    group.list.push(med);
+    if(medParts.length){
+      const hosp = hospRaw.trim() || "약";
+      const med = medParts.join("|").trim();
+      let group = groups.find(g => g.hosp === hosp);
+      if(!group){ group = { hosp, list: [] }; groups.push(group); }
+      if(med) group.list.push(med);
+      currentGroup = group;
+      return;
+    }
+    const nextRowHasPipe = rows[index + 1]?.includes("|");
+    const isHospitalHeader = !currentGroup || nextRowHasPipe || /병원|의원|약국|센터|클리닉|과(?:\s|\(|$)/.test(row);
+    if(isHospitalHeader){
+      currentGroup = { hosp: row, list: [] };
+      groups.push(currentGroup);
+    }else{
+      currentGroup.list.push(row);
+    }
   });
-  return groups;
+  return groups.filter(g => g.list.length);
 }
 async function saveResidentFromForm(form, existingId=null){
   if(!requireAdmin()) return;
@@ -872,10 +903,10 @@ async function addRoutineMedFromForm(form, residentId){
   const resident = findResident(residentId);
   if(!resident) return;
   const before = cloneData(resident.meds);
-  const hosp = form.elements.routineHosp.value.trim() || "약";
-  const med = form.elements.routineMed.value.trim();
-  if(!med){ showToast("추가할 정규약 이름을 입력해주세요."); return; }
-  const meds = addMedToGroups(resident.meds, hosp, med);
+  const additions = textToMeds(form.elements.routineMeds.value);
+  if(!additions.length){ showToast("병원명 아래에 추가할 정규약을 입력해주세요."); return; }
+  let meds = cloneData(resident.meds || []);
+  additions.forEach(g => g.list.forEach(med => { meds = addMedToGroups(meds, g.hosp, med); }));
   await setDoc(residentRef(residentId), { meds, updatedAt: serverTimestamp() }, { merge:true });
   await writeAudit("routineMed.create", resident, before, meds);
   form.reset();
@@ -906,11 +937,14 @@ async function saveTempMedFromForm(form, residentId){
   const resident = findResident(residentId);
   if(!resident) return;
   const before = cloneData(ownedTempMeds(resident));
-  const name = form.elements.tempMedName.value.trim();
+  const parsedMeds = textToMeds(form.elements.tempMeds.value);
+  const firstGroup = parsedMeds[0];
+  const allMeds = parsedMeds.flatMap(g => g.list);
+  const name = allMeds.join(", ");
   const startDate = form.elements.tempStartDate.value;
   const endDate = form.elements.tempEndDate.value;
   const times = checkedTimes(form);
-  if(!name){ showToast("추가약 이름을 입력해주세요."); return; }
+  if(!firstGroup || !name){ showToast("병원명 아래에 추가약을 입력해주세요."); return; }
   if(!startDate || !endDate || startDate > endDate){ showToast("추가약 날짜를 확인해주세요."); return; }
   if(times.length === 0){ showToast("추가약 투약시간을 선택해주세요."); return; }
   const tempMeds = [
@@ -920,6 +954,9 @@ async function saveTempMedFromForm(form, residentId){
       residentId: resident.id,
       residentName: resident.name,
       name,
+      hosp: firstGroup.hosp,
+      list: firstGroup.list,
+      meds: parsedMeds,
       note: form.elements.tempMedNote.value.trim(),
       startDate,
       endDate,
@@ -1324,11 +1361,11 @@ function residentCardHtml(r, isAdmin){
     <div class="med-group">
       <div class="hosp">${escapeHtml(g.hosp)}</div>
       <ul>${g.list.map(m=>`<li>${escapeHtml(m)}</li>`).join("")}</ul>
-    </div>`).join("") + activeTempMeds.map(m => `
+    </div>`).join("") + activeTempMeds.flatMap(m => tempMedGroups(m).map(g => `
     <div class="med-group">
-      <div class="hosp">추가약 · ${escapeHtml(m.startDate)} ~ ${escapeHtml(m.endDate)}</div>
-      <ul><li>${escapeHtml(m.name)}${m.note ? ` (${escapeHtml(m.note)})` : ""} · ${m.times.map(escapeHtml).join(", ")}</li></ul>
-    </div>`).join("");
+      <div class="hosp">추가약 · ${escapeHtml(g.hosp)} · ${escapeHtml(m.startDate)} ~ ${escapeHtml(m.endDate)}</div>
+      <ul>${g.list.map(item => `<li>${escapeHtml(item)}${m.note ? ` (${escapeHtml(m.note)})` : ""} · ${m.times.map(escapeHtml).join(", ")}</li>`).join("")}</ul>
+    </div>`)).join("");
 
   const slotButtonHtml = (timeKey, timeLabel, medLabel, medInfo=null) => {
     const log = state.logs[logKeyFor(r.id, timeKey)] || {};
@@ -1529,7 +1566,8 @@ function residentFormHtml(resident=null){
         ${timeChecksHtml(resident)}
       </div>
       <label class="wide">약 목록
-        <textarea name="meds" placeholder="병원명 | 약명&#10;병원명 | 약명">${escapeHtml(medsToText(resident?.meds || []))}</textarea>
+        <textarea name="meds" placeholder="제천서울병원(변비)&#10;모티리톤 1-1-1&#10;마그밀 2-2-2">${escapeHtml(medsToText(resident?.meds || []))}</textarea>
+        <small>첫 줄에 병원명, 다음 줄부터 약을 하나씩 입력하세요. 병원이 여러 곳이면 새 병원명을 다음 줄에 입력하면 됩니다.</small>
       </label>
       <button class="icon-btn primary wide" type="submit">${editing ? "수정 저장" : "입소자 추가"}</button>
     </form>`;
@@ -1537,7 +1575,10 @@ function residentFormHtml(resident=null){
 function tempMedFormHtml(resident){
   return `
     <form class="admin-form add-temp-med-form" data-rid="${escapeHtml(resident.id)}">
-      <label>처방약 이름<input name="tempMedName" placeholder="예: 감기약 3일분" required></label>
+      <label class="wide">병원 및 추가약
+        <textarea name="tempMeds" placeholder="제천서울병원(변비)&#10;모티리톤 1-1-1&#10;마그밀 2-2-2" required></textarea>
+        <small>첫 줄에 병원명, 다음 줄부터 추가약을 하나씩 입력하세요.</small>
+      </label>
       <label>메모<input name="tempMedNote" placeholder="예: 식후 복용"></label>
       <label>시작일<input type="date" name="tempStartDate" value="${state.date}"></label>
       <label>종료일<input type="date" name="tempEndDate" value="${state.date}"></label>
@@ -1548,10 +1589,9 @@ function tempMedFormHtml(resident){
 function routineMedAddFormHtml(resident){
   return `
     <form class="routine-med-form add-routine-med-form" data-rid="${escapeHtml(resident.id)}">
-      <input name="routineHosp" placeholder="병원/분류">
-      <input name="routineMed" placeholder="추가할 정규약">
+      <textarea name="routineMeds" placeholder="제천서울병원(변비)&#10;모티리톤 1-1-1&#10;마그밀 2-2-2" required></textarea>
       <button class="small-btn" type="submit">정규약 추가</button>
-      <span></span>
+      <small>첫 줄에 병원명, 다음 줄부터 약을 하나씩 입력하세요.</small>
     </form>`;
 }
 function routineMedRowHtml(residentId, hosp, med){
