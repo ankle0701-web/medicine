@@ -188,6 +188,16 @@
   .slot-btn.signed .label{display:none;}
   .slot-btn.signed .med-label{display:none;}
   .slot-btn.signed .line{display:block;}
+  .slot-btn.away-slot{background:var(--slate-soft); border-color:#C9D2E3;}
+  .slot-btn.away-slot .label{color:var(--slate-dark);}
+  .slot-btn.away-slot .med-label{color:var(--slate);}
+  .slot-btn.away-slot .tag,.slot-btn.away-slot .line{display:none;}
+  .slot-btn.away-slot .away-line{display:block; color:var(--slate-dark);}
+  .away-toggle{
+    margin-top:4px; border:1px solid var(--border); border-radius:7px; padding:3px 7px;
+    background:#fff; color:var(--slate); font-size:10px; font-weight:800;
+  }
+  .slot-btn.away-slot .away-toggle{background:var(--slate-dark); color:#fff; border-color:var(--slate-dark);}
 
   .slot-btn:active{transform:scale(.97);}
   .slot-btn.stamping{animation:stampPop .32s ease;}
@@ -630,6 +640,37 @@ function tempMedGroups(tempMed){
 function logKeyFor(residentId, time){
   return `${residentId}_${time}`;
 }
+function medicationSlotKeysForDate(resident, dateStr=state.date){
+  const routine = SLOT_ORDER.filter(t => resident.times.includes(t));
+  const temp = tempMedsForDate(resident, dateStr).flatMap(m => m.times.map(t => tempSlotKey(m, t)));
+  return [...routine, ...temp];
+}
+function awayEntryFor(resident){
+  return state.away[resident.id] || null;
+}
+function awaySlotsFor(resident){
+  const entry = awayEntryFor(resident);
+  return entry?.slots || {};
+}
+function isLegacyAway(resident){
+  const entry = awayEntryFor(resident);
+  return !!entry?.legacy;
+}
+function isSlotAway(resident, timeKey){
+  const entry = awayEntryFor(resident);
+  if(!entry) return false;
+  if(entry.legacy) return true;
+  return !!entry.slots?.[timeKey];
+}
+function hasAnyAwaySlot(resident){
+  const entry = awayEntryFor(resident);
+  return !!entry && (entry.legacy || Object.keys(entry.slots || {}).length > 0);
+}
+function areAllSlotsAway(resident){
+  const slots = medicationSlotKeysForDate(resident);
+  if(!slots.length) return false;
+  return slots.every(t => isSlotAway(resident, t));
+}
 function medicationSnapshot(resident, medInfo){
   const version = resident.medicationVersion || resident.updatedAt?.seconds || "unversioned";
   if(medInfo?.type === "temporary"){
@@ -1029,7 +1070,11 @@ function subscribeDate(dateStr){
     const next = {};
     snap.forEach(d=>{
       const v = d.data();
-      if(v.away) next[v.residentId] = { name:v.staffName, ts:v.ts };
+      if(v.slots && Object.keys(v.slots).length){
+        next[v.residentId] = { slots:v.slots, name:v.staffName, ts:v.ts };
+      }else if(v.away){
+        next[v.residentId] = { legacy:true, name:v.staffName, ts:v.ts };
+      }
     });
     state.away = next;
     render();
@@ -1067,7 +1112,12 @@ function subscribeMonth(monthStr){
     const next = {};
     snap.forEach(d=>{
       const v = d.data();
-      if(v.away){
+      if(v.slots && Object.keys(v.slots).length){
+        const day = parseInt(v.date.slice(8,10), 10);
+        Object.entries(v.slots).forEach(([timeKey, info])=>{
+          next[`${v.residentId}_${day}_${timeKey}`] = info || { name:v.staffName };
+        });
+      }else if(v.away){
         const day = parseInt(v.date.slice(8,10), 10);
         next[`${v.residentId}_${day}`] = { name:v.staffName };
       }
@@ -1083,7 +1133,7 @@ function subscribeMonth(monthStr){
 async function handleSlotClick(resident, time, medInfo=null){
   if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
   if(!resident){ showToast("입소자 정보를 찾을 수 없습니다."); return; }
-  if(state.away[resident.id]) return;
+  if(isSlotAway(resident, time)) return;
 
   const staff = actorInfo();
   const key = logKeyFor(resident.id, time);
@@ -1162,18 +1212,53 @@ async function toggleAway(resident){
   const staff = actorInfo();
   const id = `${resident.id}_${state.date}`;
   const ref = doc(db, "residentStatus", id);
-  if(state.away[resident.id]){
+  const slots = medicationSlotKeysForDate(resident);
+  if(areAllSlotsAway(resident)){
     await deleteDoc(ref);
-    await writeAudit("residentStatus.clear", resident, state.away[resident.id], { away:false, date:state.date });
-    showToast(`${resident.name} 귀가 표시를 해제했습니다.`);
+    await writeAudit("residentStatus.clear", resident, state.away[resident.id], { slots:{}, date:state.date });
+    showToast(`${resident.name} 전체 귀가 표시를 해제했습니다.`);
   }else{
+    const nextSlots = {};
+    slots.forEach(timeKey=>{
+      nextSlots[timeKey] = { name:staff.name, uid:staff.uid, email:staff.email, ts:nowLabel() };
+    });
     await setDoc(ref, {
       residentId: resident.id, unit: resident.unit, date: state.date,
-      away: true, staffName: staff.name, staffUid: staff.uid, staffEmail: staff.email, ts: nowLabel()
+      away: false, slots: nextSlots,
+      staffName: staff.name, staffUid: staff.uid, staffEmail: staff.email, ts: nowLabel()
     });
-    await writeAudit("residentStatus.away", resident, null, { away:true, date:state.date });
-    showToast(`${resident.name} 귀가/외박으로 표시했습니다.`);
+    await writeAudit("residentStatus.away", resident, null, { slots:nextSlots, date:state.date });
+    showToast(`${resident.name} 전체 시간대를 귀가/외박으로 표시했습니다.`);
   }
+}
+
+async function toggleAwaySlot(resident, timeKey){
+  if(!firebaseReady){ showToast("Firebase 설정을 먼저 완료해주세요."); return; }
+  if(!resident){ showToast("입소자 정보를 찾을 수 없습니다."); return; }
+  const staff = actorInfo();
+  const id = `${resident.id}_${state.date}`;
+  const ref = doc(db, "residentStatus", id);
+  const currentSlots = isLegacyAway(resident)
+    ? Object.fromEntries(medicationSlotKeysForDate(resident).map(t => [t, awayEntryFor(resident)]))
+    : {...awaySlotsFor(resident)};
+  if(currentSlots[timeKey]){
+    delete currentSlots[timeKey];
+  }else{
+    currentSlots[timeKey] = { name:staff.name, uid:staff.uid, email:staff.email, ts:nowLabel() };
+  }
+  if(Object.keys(currentSlots).length === 0){
+    await deleteDoc(ref);
+    await writeAudit("residentStatus.slotClear", resident, null, { time:timeKey, date:state.date });
+    showToast(`${resident.name} · ${timeKey} 귀가 표시를 해제했습니다.`);
+    return;
+  }
+  await setDoc(ref, {
+    residentId: resident.id, unit: resident.unit, date: state.date,
+    away: false, slots: currentSlots,
+    staffName: staff.name, staffUid: staff.uid, staffEmail: staff.email, ts: nowLabel()
+  });
+  await writeAudit("residentStatus.slotAway", resident, null, { time:timeKey, slots:currentSlots, date:state.date });
+  showToast(`${resident.name} · ${timeKey} ${currentSlots[timeKey] ? "귀가/외박으로 표시했습니다." : "귀가 표시를 해제했습니다."}`);
 }
 
 /* ============================================================
@@ -1326,12 +1411,19 @@ function renderDayHtml(unit, isAdmin){
   const list = getResidents(unit);
   let done = 0, total = 0, awayCount = 0;
   list.forEach(r=>{
-    if(state.away[r.id]){ awayCount++; return; }
-    r.times.forEach(t=>{ total++; const log = state.logs[logKeyFor(r.id, t)]; if(log && log.administer && log.confirm) done++; });
+    if(hasAnyAwaySlot(r)) awayCount++;
+    r.times.forEach(t=>{
+      if(isSlotAway(r, t)) return;
+      total++;
+      const log = state.logs[logKeyFor(r.id, t)];
+      if(log && log.administer && log.confirm) done++;
+    });
     tempMedsForDate(r, state.date).forEach(m=>{
       m.times.forEach(t=>{
+        const key = tempSlotKey(m, t);
+        if(isSlotAway(r, key)) return;
         total++;
-        const log = state.logs[logKeyFor(r.id, tempSlotKey(m, t))];
+        const log = state.logs[logKeyFor(r.id, key)];
         if(log && log.administer && log.confirm) done++;
       });
     });
@@ -1355,7 +1447,8 @@ function renderDayHtml(unit, isAdmin){
 
 function residentCardHtml(r, isAdmin){
   const open = !!state.openPanels[r.id];
-  const away = state.away[r.id];
+  const away = awayEntryFor(r);
+  const fullAway = areAllSlotsAway(r);
   const activeTempMeds = tempMedsForDate(r, state.date);
   const medGroups = r.meds.map(g => `
     <div class="med-group">
@@ -1368,17 +1461,21 @@ function residentCardHtml(r, isAdmin){
     </div>`)).join("");
 
   const slotButtonHtml = (timeKey, timeLabel, medLabel, medInfo=null) => {
+    const slotAway = isSlotAway(r, timeKey);
+    const awayInfo = awaySlotsFor(r)[timeKey] || (isLegacyAway(r) ? away : null);
     const log = state.logs[logKeyFor(r.id, timeKey)] || {};
-    const hasLog = !!log.administer;
+    const hasLog = !slotAway && !!log.administer;
     const confirmed = hasLog && !!log.confirm;
-    const cls = confirmed ? "signed" : (hasLog ? "pending" : "");
+    const cls = slotAway ? "away-slot" : (confirmed ? "signed" : (hasLog ? "pending" : ""));
     return `
       <button class="slot-btn ${cls} ${hasLog?'has-log':''} ${isAdmin?'admin-mode':''}" data-rid="${escapeHtml(r.id)}" data-time="${escapeHtml(timeKey)}" data-med-name="${escapeHtml(medInfo?.name || "정규약")}" data-med-type="${escapeHtml(medInfo?.type || "routine")}" data-temp-med-id="${escapeHtml(medInfo?.tempMedId || "")}">
         <span class="label">${escapeHtml(timeLabel)}</span>
         <span class="med-label">${escapeHtml(medLabel)}</span>
+        <span class="line away-line">귀가/외박 ${awayInfo ? `${escapeHtml(awayInfo.name || "")} ${escapeHtml(awayInfo.ts || "")}` : ""}</span>
         <span class="tag">${escapeHtml(timeLabel)} · 확인 대기</span>
         <span class="line admin">${hasLog ? `투약 ${escapeHtml(log.administer.name)} ${escapeHtml(log.administer.ts)}` : ""}</span>
         <span class="line confirm">${confirmed ? `확인 ${escapeHtml(log.confirm.name)} ${escapeHtml(log.confirm.ts)}` : ""}</span>
+        <span class="away-toggle no-print" data-away-slot="${escapeHtml(r.id)}" data-time="${escapeHtml(timeKey)}">${slotAway ? "귀가해제" : "귀가"}</span>
         ${hasLog ? `<span class="unsign" data-rid="${escapeHtml(r.id)}" data-time="${escapeHtml(timeKey)}">×</span>` : ""}
       </button>`;
   };
@@ -1391,29 +1488,27 @@ function residentCardHtml(r, isAdmin){
   const tempBadges = activeTempMeds.map(m => `<span class="temp-med-badge">처방약 ${escapeHtml(r.name)} · ${escapeHtml(m.name)} · ${m.times.map(escapeHtml).join(", ")}</span>`).join("");
 
   return `
-    <div class="resident-card ${away?'away':''}">
+    <div class="resident-card ${fullAway?'away':''}">
       <div class="resident-head" data-id="${r.id}">
         <div>
-          <div class="resident-name">${escapeHtml(r.name)}${away ? `<span class="away-badge">귀가/외박</span>`:""}</div>
+          <div class="resident-name">${escapeHtml(r.name)}${away ? `<span class="away-badge">${fullAway ? "전체 귀가/외박" : "일부 귀가/외박"}</span>`:""}</div>
           <div class="resident-dx">${escapeHtml(r.dx)}</div>
           ${tempBadges ? `<div>${tempBadges}</div>` : ""}
         </div>
         <div class="head-actions">
-          <button class="away-btn no-print ${away?'active':''}" data-away="${r.id}">${away ? "귀가 해제" : "귀가/외박"}</button>
+          <button class="away-btn no-print ${fullAway?'active':''}" data-away="${r.id}">${fullAway ? "전체 해제" : "전체 귀가"}</button>
           <div class="chev-label no-print" data-toggle="${r.id}">약정보 <span class="chev ${open?'open':''}">▾</span></div>
         </div>
       </div>
       <div class="med-panel ${open?'open':''}">${medGroups}</div>
-      ${away
-        ? `<div class="away-note">귀가/외박으로 표시됨 (${escapeHtml(away.name)} · ${escapeHtml(away.ts)}) - 오늘 투약 없음</div>`
-        : `<div class="slot-row">${routineSlots}</div>${tempSlots ? `<div class="slot-row temp-slot-row"><div class="temp-slot-label">지금 처방받은약 · ${escapeHtml(r.name)}</div>${tempSlots}</div>` : ""}`}
+      <div class="slot-row">${routineSlots}</div>${tempSlots ? `<div class="slot-row temp-slot-row"><div class="temp-slot-label">지금 처방받은약 · ${escapeHtml(r.name)}</div>${tempSlots}</div>` : ""}
     </div>
   `;
 }
 
 function cellHtml(r, d, row, todayD){
   if(row.active && !row.active(d)) return `<td class="${d===todayD ? "today-col" : ""}"></td>`;
-  const awayInfo = state.monthAway[`${r.id}_${d}`];
+  const awayInfo = state.monthAway[`${r.id}_${d}_${row.key}`] || state.monthAway[`${r.id}_${d}`];
   const log = state.monthLogs[`${r.id}_${d}_${row.key}`];
   let cls = "", content = "", title = `${d}일 ${row.label}`;
   if(awayInfo){
@@ -1837,6 +1932,7 @@ function bindCommonEvents(isAdmin, isMonth, isAdminPage){
     document.querySelectorAll(".slot-btn").forEach(b=>{
       b.onclick = (e)=>{
         if(e.target.classList.contains("unsign")) return;
+        if(e.target.classList.contains("away-toggle")) return;
         const rid = b.dataset.rid, time = b.dataset.time;
         const resident = findResident(rid);
         b.classList.add("stamping");
@@ -1845,6 +1941,13 @@ function bindCommonEvents(isAdmin, isMonth, isAdminPage){
           type: b.dataset.medType || "routine",
           tempMedId: b.dataset.tempMedId || null
         });
+      };
+    });
+    document.querySelectorAll(".away-toggle").forEach(btn=>{
+      btn.onclick = (e)=>{
+        e.stopPropagation();
+        const resident = findResident(btn.dataset.awaySlot);
+        toggleAwaySlot(resident, btn.dataset.time);
       };
     });
     document.querySelectorAll(".unsign").forEach(u=>{
