@@ -344,8 +344,9 @@
     .slot-btn .unsign{display:none !important;}
     .summary-bar{display:none;}
     @page{ size: landscape; margin: 10mm; }
-    table.month-table{font-size:11px;}
-    table.month-table th, table.month-table td{padding:5px 4px; min-width:48px;}
+    table.month-table{font-size:10px; min-width:0; table-layout:fixed;}
+    table.month-table th, table.month-table td{padding:4px 3px; min-width:0;}
+    table.month-table tbody th{width:54px;}
     .half-label{font-size:11px; margin:7px 0 3px;}
     table.month-table td.pending .tag{font-size:7.5px;}
     .unit-block h2{break-after:avoid;}
@@ -469,6 +470,7 @@ let state = {
   loginError: "",
   activeTab: "기린초1",
   date: todayStr(),
+  followToday: true,
   month: todayStr().slice(0,7),
   monthWeek: "1",
   residents: defaultResidents(),
@@ -1357,9 +1359,6 @@ function renderApp(){
           <input type="month" id="monthInput" value="${state.month}">
           <button class="date-nav" id="nextMonth">›</button>
         </div>
-        <div class="date-row">
-          <select id="weekInput">${monthWeekOptionsHtml()}</select>
-        </div>
       ` : `
         <div class="date-row">
           <button class="date-nav" id="prevDay">‹</button>
@@ -1398,8 +1397,8 @@ function printDayHeaderHtml(unit){
     </div>`;
 }
 function printMonthHeaderHtml(){
-  const week = currentMonthWeek();
-  const label = `${week.idx+1}주차 (${week.days[0]}~${week.days[week.days.length-1]}일)`;
+  const days = monthDays(state.month);
+  const label = `1일~${days[days.length-1]}일`;
   return `
     <div class="print-header print-only">
       <h1>투약 서명 전체현황 · ${state.month} · ${label}</h1>
@@ -1542,6 +1541,11 @@ function halfTableHtml(r, days, todayD, label){
       </table>
     </div>`;
 }
+function monthDays(monthStr){
+  const [y,m] = monthStr.split("-").map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  return Array.from({length:daysInMonth}, (_,i)=> i+1);
+}
 function monthWeekChunks(monthStr){
   const [y,m] = monthStr.split("-").map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
@@ -1611,9 +1615,8 @@ function printMedListHtml(r, days=null){
 
 function renderMonthHtml(){
   const todayD = (state.month === todayStr().slice(0,7)) ? Number(todayStr().slice(8,10)) : -1;
-  const week = currentMonthWeek();
-  const days = week.days;
-  const weekLabel = `${week.idx+1}주차 (${days[0]}~${days[days.length-1]}일)`;
+  const days = monthDays(state.month);
+  const dayGroups = [days.slice(0, 15), days.slice(15)].filter(group => group.length);
 
   return UNITS.map(unit=>{
     const list = getResidents(unit);
@@ -1622,7 +1625,7 @@ function renderMonthHtml(){
         <div class="month-card">
           <div class="mc-head"><span class="mc-name">${escapeHtml(r.name)}</span><span class="mc-dx">${escapeHtml(r.dx)}</span></div>
           ${printMedListHtml(r, days)}
-          ${halfTableHtml(r, days, todayD, weekLabel)}
+          ${dayGroups.map(group => halfTableHtml(r, group, todayD, `월간표 (${group[0]}~${group[group.length-1]}일)`)).join("")}
           <div class="legend-note print-only">※ 붉은색 : 투약자, 검은색 : 확인자</div>
           <div class="print-approval print-only">
             <div class="approval-box">
@@ -1822,6 +1825,7 @@ function bindCommonEvents(isAdmin, isMonth, isAdminPage){
       }else if(state.activeTab === "전체현황"){
         if(state.unsubDay){ state.unsubDay(); state.unsubDay=null; }
         if(state.unsubAwayDay){ state.unsubAwayDay(); state.unsubAwayDay=null; }
+        state.followToday = state.date === todayStr();
         syncMonthToSelectedDate();
         subscribeMonth(state.month);
       }else{
@@ -1900,15 +1904,12 @@ function bindCommonEvents(isAdmin, isMonth, isAdminPage){
       subscribeMonth(state.month);
       render();
     };
-    document.getElementById("weekInput").onchange = e=>{
-      state.monthWeek = e.target.value;
-      render();
-    };
     document.getElementById("prevMonth").onclick = ()=> shiftMonth(-1);
     document.getElementById("nextMonth").onclick = ()=> shiftMonth(1);
   }else{
     document.getElementById("dateInput").onchange = e=>{
       state.date = e.target.value;
+      state.followToday = state.date === todayStr();
       subscribeDate(state.date);
       render();
     };
@@ -1966,6 +1967,7 @@ function shiftDate(delta){
   d.setDate(d.getDate() + delta);
   const p = n => String(n).padStart(2,"0");
   state.date = `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+  state.followToday = state.date === todayStr();
   subscribeDate(state.date);
   render();
 }
@@ -1978,6 +1980,28 @@ function shiftMonth(delta){
   subscribeMonth(state.month);
   render();
 }
+
+let lastKnownToday = todayStr();
+function refreshTodayIfNeeded(){
+  const today = todayStr();
+  if(today === lastKnownToday) return;
+  lastKnownToday = today;
+  if(!state.followToday) return;
+  state.date = today;
+  state.month = today.slice(0,7);
+  state.monthWeek = weekNumberForDate(today);
+  if(state.currentUser && state.userProfile){
+    if(state.activeTab === "전체현황") subscribeMonth(state.month);
+    else if(state.activeTab !== "입소자 관리") subscribeDate(state.date);
+  }
+  render();
+  showToast("날짜가 오늘로 자동 변경되었습니다.");
+}
+setInterval(refreshTodayIfNeeded, 60000);
+window.addEventListener("focus", refreshTodayIfNeeded);
+document.addEventListener("visibilitychange", ()=>{
+  if(!document.hidden) refreshTodayIfNeeded();
+});
 
 if(firebaseReady && auth){
   onAuthStateChanged(auth, async user=>{
